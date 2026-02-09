@@ -5,6 +5,7 @@ Speckle CLI - Unified command-line interface for Speckle tools
 Usage:
     speckle board [--port PORT]     Start kanban board server
     speckle doctor [--fix]          Run diagnostic checks
+    speckle gh [--all] [--limit N]  List GitHub issues (epic colors, priority icons)
     speckle status                  Show feature progress (via bd)
     speckle sync                    Sync beads with git (via bd)
     speckle --help                  Show this help message
@@ -104,6 +105,119 @@ def cmd_version(args):
     return 0
 
 
+def cmd_gh(args):
+    """List GitHub issues with epic colors and priority icons."""
+    import json
+    
+    # Priority icons (not colors)
+    PRIORITY_ICONS = {
+        'critical': '🔥',  # P0
+        'high': '⚡',      # P1  
+        'medium': '📌',    # P2
+        'low': '📎',       # P3
+    }
+    
+    # Epic colors (ANSI escape codes)
+    EPIC_COLORS = [
+        '\033[38;5;33m',   # Blue
+        '\033[38;5;166m',  # Orange
+        '\033[38;5;128m',  # Purple
+        '\033[38;5;36m',   # Teal
+        '\033[38;5;196m',  # Red
+        '\033[38;5;220m',  # Yellow
+        '\033[38;5;46m',   # Green
+        '\033[38;5;201m',  # Magenta
+    ]
+    RESET = '\033[0m'
+    DIM = '\033[2m'
+    
+    # Fetch issues from GitHub
+    cmd = ['gh', 'issue', 'list', '--json', 'number,title,labels,state', '--limit', str(args.limit)]
+    if args.all:
+        cmd.extend(['--state', 'all'])
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        issues = json.loads(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Error fetching issues: {e.stderr}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError:
+        print("Error parsing GitHub response", file=sys.stderr)
+        return 1
+    
+    if not issues:
+        print("No issues found")
+        return 0
+    
+    # Build epic color mapping
+    epic_color_map = {}
+    color_index = 0
+    
+    for issue in issues:
+        for label in issue.get('labels', []):
+            name = label.get('name', '')
+            if name.startswith('epic:'):
+                epic = name[5:]  # Remove 'epic:' prefix
+                if epic not in epic_color_map:
+                    epic_color_map[epic] = EPIC_COLORS[color_index % len(EPIC_COLORS)]
+                    color_index += 1
+    
+    # Display issues
+    print()
+    for issue in issues:
+        num = issue['number']
+        title = issue['title']
+        state = issue['state']
+        labels = issue.get('labels', [])
+        
+        # Find epic and priority
+        epic = None
+        priority = None
+        priority_icon = '  '  # Default: no icon (2 spaces for alignment)
+        
+        for label in labels:
+            name = label.get('name', '')
+            if name.startswith('epic:'):
+                epic = name[5:]
+            elif name.startswith('priority:'):
+                priority = name[9:]
+            elif name in ('critical', 'high', 'medium', 'low'):
+                priority = name
+            elif name.startswith('severity:'):
+                priority = name[9:]
+        
+        # Get priority icon
+        if priority and priority in PRIORITY_ICONS:
+            priority_icon = PRIORITY_ICONS[priority]
+        
+        # Get epic color
+        if epic and epic in epic_color_map:
+            color = epic_color_map[epic]
+        else:
+            color = DIM  # No epic = dimmed
+        
+        # State indicator
+        state_icon = '○' if state == 'OPEN' else '●'
+        
+        # Format output
+        print(f"  {priority_icon} {color}#{num:<4}{RESET} {state_icon} {color}{title}{RESET}")
+    
+    # Legend
+    if epic_color_map and not args.no_legend:
+        print()
+        print(f"  {DIM}─── Epics ───{RESET}")
+        for epic, color in epic_color_map.items():
+            print(f"  {color}■{RESET} {epic}")
+        print()
+        print(f"  {DIM}─── Priority ───{RESET}")
+        for name, icon in PRIORITY_ICONS.items():
+            print(f"  {icon} {name}")
+    
+    print()
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog='speckle',
@@ -113,6 +227,7 @@ def main():
 Commands:
   board       Start the kanban board web interface
   doctor      Run diagnostic checks on your Speckle installation
+  gh          List GitHub issues (colored by epic, priority icons)
   status      Show current work status (via beads)
   sync        Sync beads issues with git
   ready       Show available work items
@@ -122,6 +237,8 @@ Examples:
   speckle board                    # Start board on default port 8420
   speckle board --port 3000        # Start board on port 3000
   speckle doctor --fix             # Run diagnostics and fix issues
+  speckle gh                       # List GitHub issues with epic colors
+  speckle gh --all --limit 50      # Show all issues including closed
   speckle status --all             # Show all issues including closed
 
 For Claude commands, use:
@@ -168,6 +285,16 @@ For Claude commands, use:
     # version subcommand
     version_parser = subparsers.add_parser('version', help='Show version')
     version_parser.set_defaults(func=cmd_version)
+    
+    # gh subcommand
+    gh_parser = subparsers.add_parser('gh', help='List GitHub issues (epic colors, priority icons)')
+    gh_parser.add_argument('--all', '-a', action='store_true',
+                           help='Show all issues including closed')
+    gh_parser.add_argument('--limit', '-l', type=int, default=20,
+                           help='Maximum issues to show (default: 20)')
+    gh_parser.add_argument('--no-legend', action='store_true',
+                           help='Hide the legend')
+    gh_parser.set_defaults(func=cmd_gh)
     
     args = parser.parse_args()
     
