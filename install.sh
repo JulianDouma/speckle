@@ -355,7 +355,7 @@ do_install() {
     log ""
     log "${BOLD}Installing commands...${NC}"
     local cmd_count=0
-    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md; do
+    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md speckle.board.md; do
         if [[ -f "$SCRIPT_DIR/.claude/commands/$cmd" ]]; then
             cp "$SCRIPT_DIR/.claude/commands/$cmd" "$target/.claude/commands/"
             log "  ${GREEN}[OK]${NC} $cmd"
@@ -371,7 +371,7 @@ do_install() {
     # Copy scripts
     log ""
     log "${BOLD}Installing scripts...${NC}"
-    for script in common.sh comments.sh labels.sh epics.sh; do
+    for script in common.sh comments.sh labels.sh epics.sh board.py; do
         if [[ -f "$SCRIPT_DIR/.speckle/scripts/$script" ]]; then
             cp "$SCRIPT_DIR/.speckle/scripts/$script" "$target/.speckle/scripts/"
             chmod +x "$target/.speckle/scripts/$script"
@@ -440,6 +440,7 @@ do_install() {
     log "   /speckle.bugfix    - Start bugfix workflow"
     log "   /speckle.hotfix    - Start urgent fix workflow"
     log "   /speckle.doctor    - Diagnose installation issues"
+    log "   /speckle.board     - Web-based kanban board"
     log ""
     log "${BOLD}Quick start:${NC}"
     log "   1. Create spec:  ${CYAN}/speckit.specify \"Your feature\"${NC}"
@@ -481,7 +482,7 @@ do_uninstall() {
     log "${BOLD}Removing Speckle files...${NC}"
     
     # Remove commands
-    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md; do
+    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md speckle.board.md; do
         if [[ -f "$target/.claude/commands/$cmd" ]]; then
             rm "$target/.claude/commands/$cmd"
             log "  ${GREEN}[OK]${NC} Removed $cmd"

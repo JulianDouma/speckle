@@ -95,6 +95,7 @@ Options:
 | `/speckle.bugfix` | Start lightweight bugfix workflow |
 | `/speckle.hotfix` | Start urgent hotfix workflow |
 | `/speckle.doctor` | Diagnose installation and configuration issues |
+| `/speckle.board` | Web-based kanban board for visualizing issues |
 
 ## Formulas
 
@@ -215,6 +216,39 @@ Workflow:
 | Feature development | `/speckit.specify` + `/speckle.sync` |
 | Non-urgent bug | `/speckle.bugfix` |
 | Production incident | `/speckle.hotfix` |
+
+## Kanban Board
+
+Visualize your beads issues in a web-based kanban board:
+
+```bash
+/speckle.board
+```
+
+This opens a browser with a 4-column kanban view:
+
+| Column | Status | Description |
+|--------|--------|-------------|
+| BACKLOG | open | Ready to work on |
+| IN PROGRESS | in_progress | Currently being worked |
+| BLOCKED | blocked | Waiting on something |
+| DONE | closed | Completed (last 15) |
+
+**Options:**
+
+```bash
+/speckle.board --port 3000        # Custom port
+/speckle.board --filter "v1.2.0"  # Filter by label
+/speckle.board --no-browser       # Don't auto-open browser
+/speckle.board --refresh 10       # 10 second refresh
+```
+
+**Features:**
+- Priority color coding (P0-P4)
+- Type badges (task, bug, feature, epic)
+- Label filtering via dropdown
+- Auto-refresh (default: 5 seconds)
+- Responsive layout for tablet/mobile
 
 ## Troubleshooting
 

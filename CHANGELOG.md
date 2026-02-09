@@ -2,6 +2,38 @@
 
 All notable changes to Speckle are documented here.
 
+## [1.2.0] - 2026-02-09
+
+### Kanban Board
+
+Web-based kanban board for visualizing beads issues.
+
+### Added
+- `/speckle.board` command to launch kanban board server
+  - 4-column layout: Backlog, In Progress, Blocked, Done
+  - Priority color coding (P0-P4)
+  - Type badges (task, bug, feature, epic)
+  - Time ago formatting ("2h ago")
+  - Label display on cards (up to 3)
+  - Label filter dropdown
+  - Auto-refresh (configurable interval)
+  - Responsive CSS grid (tablet/mobile)
+- Command-line options:
+  - `--port`: Custom port (default: 8420)
+  - `--filter`: Filter by label
+  - `--refresh`: Refresh interval in seconds
+  - `--no-browser`: Don't auto-open browser
+- API endpoints:
+  - `GET /`: HTML board
+  - `GET /api/issues`: JSON issue list
+  - `GET /health`: Health check
+- `board.py` script using Python stdlib only (zero dependencies)
+
+### Technical
+- Built using Speckle workflow (self-hosted development)
+- 17 tasks across 4 phases tracked in beads
+- Full spec-kit specification in `specs/008-kanban-board/`
+
 ## [1.1.0] - 2026-02-09
 
 ### Improved Installation Experience
