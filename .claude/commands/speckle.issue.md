@@ -12,9 +12,33 @@ Guided issue creation that integrates with beads tracking and optionally links t
 $ARGUMENTS
 ```
 
-The text after `/speckle.issue` is the issue title/description.
+**Usage**: `/speckle.issue "<title>" [--type <type>] [--priority <0-4>] [--labels <labels>] [--spec <name>]`
 
-Example: `/speckle.issue "Add dark mode support"`
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `<title>` | Yes | - | Issue title (quoted string) |
+| `--type` | No | feature | One of: feature, bug, enhancement, chore, docs |
+| `--priority` | No | 2 | Priority 0-4 (0=critical, 4=low) |
+| `--labels` | No | - | Comma-separated labels |
+| `--spec` | No | - | Spec name to link (e.g., "001-feature-name") |
+| `--description` | No | - | Issue description |
+
+**Examples**:
+```bash
+# Simple feature
+/speckle.issue "Add dark mode support"
+
+# Bug with priority
+/speckle.issue "Login fails on Safari" --type bug --priority 1
+
+# Feature linked to spec
+/speckle.issue "User comments system" --type feature --spec 001-comments
+
+# Full specification
+/speckle.issue "API rate limiting" --type feature --priority 1 --labels "api,security" --description "Implement rate limiting for all API endpoints"
+```
+
+**Note**: If called without arguments, Claude will ask for the required information interactively.
 
 ## Prerequisites
 
@@ -45,129 +69,126 @@ fi
 ## Parse Input
 
 ```bash
-ISSUE_TITLE="$ARGUMENTS"
+# Parse arguments - supports both positional and named arguments
+# Format: "<title>" [--type <type>] [--priority <0-4>] [--labels <labels>] [--spec <name>] [--description <desc>]
 
-# If no title provided, prompt for interactive mode
+ISSUE_TITLE=""
+ISSUE_TYPE="feature"
+PRIORITY=2
+EXTRA_LABELS=""
+SPEC_LINK=""
+DESCRIPTION=""
+CREATE_SPEC=false
+
+# Parse arguments
+ARGS="$ARGUMENTS"
+while [[ -n "$ARGS" ]]; do
+    case "$ARGS" in
+        --type*)
+            ARGS="${ARGS#--type}"
+            ARGS="${ARGS# }"
+            ISSUE_TYPE="${ARGS%% *}"
+            ARGS="${ARGS#$ISSUE_TYPE}"
+            ;;
+        --priority*)
+            ARGS="${ARGS#--priority}"
+            ARGS="${ARGS# }"
+            PRIORITY="${ARGS%% *}"
+            ARGS="${ARGS#$PRIORITY}"
+            ;;
+        --labels*)
+            ARGS="${ARGS#--labels}"
+            ARGS="${ARGS# }"
+            if [[ "$ARGS" == \"* ]]; then
+                EXTRA_LABELS="${ARGS#\"}"
+                EXTRA_LABELS="${EXTRA_LABELS%%\"*}"
+                ARGS="${ARGS#\"$EXTRA_LABELS\"}"
+            else
+                EXTRA_LABELS="${ARGS%% *}"
+                ARGS="${ARGS#$EXTRA_LABELS}"
+            fi
+            ;;
+        --spec*)
+            ARGS="${ARGS#--spec}"
+            ARGS="${ARGS# }"
+            SPEC_NAME="${ARGS%% *}"
+            ARGS="${ARGS#$SPEC_NAME}"
+            if [ -d "specs/$SPEC_NAME" ]; then
+                SPEC_LINK="specs/$SPEC_NAME"
+            fi
+            ;;
+        --description*)
+            ARGS="${ARGS#--description}"
+            ARGS="${ARGS# }"
+            if [[ "$ARGS" == \"* ]]; then
+                DESCRIPTION="${ARGS#\"}"
+                DESCRIPTION="${DESCRIPTION%%\"*}"
+                ARGS="${ARGS#\"$DESCRIPTION\"}"
+            else
+                DESCRIPTION="${ARGS%% *}"
+                ARGS="${ARGS#$DESCRIPTION}"
+            fi
+            ;;
+        --create-spec*)
+            ARGS="${ARGS#--create-spec}"
+            CREATE_SPEC=true
+            ;;
+        \"*)
+            # Quoted title
+            ISSUE_TITLE="${ARGS#\"}"
+            ISSUE_TITLE="${ISSUE_TITLE%%\"*}"
+            ARGS="${ARGS#\"$ISSUE_TITLE\"}"
+            ;;
+        *)
+            # Skip unknown or whitespace
+            ARGS="${ARGS# }"
+            [[ "$ARGS" == "$OLD_ARGS" ]] && break
+            OLD_ARGS="$ARGS"
+            ;;
+    esac
+    ARGS="${ARGS# }"
+done
+
+# Validate required fields
 if [ -z "$ISSUE_TITLE" ]; then
-    echo "📝 Guided Issue Creation"
-    echo "════════════════════════════════════════════════════════════"
+    log_error "Issue title is required"
     echo ""
-    read -p "Issue title: " ISSUE_TITLE
-    
-    if [ -z "$ISSUE_TITLE" ]; then
-        log_error "Issue title is required"
-        exit 1
-    fi
+    echo "Usage: /speckle.issue \"<title>\" [--type <type>] [--priority <0-4>] [--labels <labels>]"
+    echo ""
+    echo "Examples:"
+    echo "  /speckle.issue \"Add dark mode support\""
+    echo "  /speckle.issue \"Login bug\" --type bug --priority 1"
+    exit 1
+fi
+
+# Validate issue type
+case "$ISSUE_TYPE" in
+    feature|bug|enhancement|chore|docs) ;;
+    *) 
+        log_warn "Unknown type '$ISSUE_TYPE', defaulting to 'feature'"
+        ISSUE_TYPE="feature"
+        ;;
+esac
+
+# Set severity for bugs based on priority
+SEVERITY=""
+if [ "$ISSUE_TYPE" = "bug" ]; then
+    case "$PRIORITY" in
+        0) SEVERITY="critical" ;;
+        1) SEVERITY="high" ;;
+        2) SEVERITY="medium" ;;
+        3|4) SEVERITY="low" ;;
+    esac
 fi
 
 echo ""
 echo "📝 Creating issue: $ISSUE_TITLE"
-echo ""
-```
-
-## Classify Issue Type
-
-```bash
-echo "Select issue type:"
-echo "  1) feature  - New functionality"
-echo "  2) bug      - Something isn't working"
-echo "  3) enhancement - Improvement to existing functionality"
-echo "  4) chore    - Maintenance or housekeeping"
-echo "  5) docs     - Documentation"
-echo ""
-read -p "Type [1-5]: " TYPE_CHOICE
-
-case "$TYPE_CHOICE" in
-    1|feature)   ISSUE_TYPE="feature" ;;
-    2|bug)       ISSUE_TYPE="bug" ;;
-    3|enhancement) ISSUE_TYPE="enhancement" ;;
-    4|chore)     ISSUE_TYPE="chore" ;;
-    5|docs)      ISSUE_TYPE="docs" ;;
-    *)           ISSUE_TYPE="feature" ;;
-esac
-
 echo "   Type: $ISSUE_TYPE"
-```
-
-## Collect Details
-
-```bash
-# Severity/Priority (for bugs)
-if [ "$ISSUE_TYPE" = "bug" ]; then
-    echo ""
-    echo "Bug severity:"
-    echo "  1) critical - Production down, data loss"
-    echo "  2) high     - Major feature broken"
-    echo "  3) medium   - Feature impaired but workaround exists"
-    echo "  4) low      - Minor issue"
-    echo ""
-    read -p "Severity [1-4]: " SEV_CHOICE
-    
-    case "$SEV_CHOICE" in
-        1|critical) SEVERITY="critical"; PRIORITY=0 ;;
-        2|high)     SEVERITY="high"; PRIORITY=1 ;;
-        3|medium)   SEVERITY="medium"; PRIORITY=2 ;;
-        4|low)      SEVERITY="low"; PRIORITY=3 ;;
-        *)          SEVERITY="medium"; PRIORITY=2 ;;
-    esac
-    
-    echo "   Severity: $SEVERITY"
-else
-    PRIORITY=2
-fi
-
-# Description
+echo "   Priority: P$PRIORITY"
+[ -n "$SEVERITY" ] && echo "   Severity: $SEVERITY"
+[ -n "$EXTRA_LABELS" ] && echo "   Labels: $EXTRA_LABELS"
+[ -n "$SPEC_LINK" ] && echo "   Spec: $SPEC_LINK"
 echo ""
-echo "Enter description (press Enter twice to finish):"
-DESCRIPTION=""
-while IFS= read -r line; do
-    [ -z "$line" ] && break
-    DESCRIPTION="${DESCRIPTION}${line}
-"
-done
-
-# Labels
-echo ""
-read -p "Additional labels (comma-separated, or empty): " EXTRA_LABELS
-```
-
-## Determine Spec Linking
-
-```bash
-echo ""
-echo "Link to specification?"
-echo "  1) No spec needed - Simple issue"
-echo "  2) Create new spec - Complex feature requiring planning"
-echo "  3) Link existing spec - Connect to existing spec"
-echo ""
-read -p "Spec linking [1-3]: " SPEC_CHOICE
-
-SPEC_LINK=""
-CREATE_SPEC=false
-
-case "$SPEC_CHOICE" in
-    2)
-        CREATE_SPEC=true
-        echo ""
-        echo "A spec will be created after the issue."
-        echo "Use /speckit.specify to develop the specification."
-        ;;
-    3)
-        echo ""
-        echo "Available specs:"
-        find specs -maxdepth 1 -type d -name "[0-9]*-*" 2>/dev/null | while read -r spec; do
-            echo "  - $(basename "$spec")"
-        done
-        echo ""
-        read -p "Spec name (e.g., 001-feature-name): " SPEC_NAME
-        if [ -d "specs/$SPEC_NAME" ]; then
-            SPEC_LINK="specs/$SPEC_NAME"
-            echo "   Linked to: $SPEC_LINK"
-        else
-            log_warn "Spec not found, skipping link"
-        fi
-        ;;
-esac
 ```
 
 ## Build Issue Body

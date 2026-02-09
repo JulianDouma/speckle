@@ -19,17 +19,25 @@ Example: `/speckle.bugfix "Login timeout after 30 seconds"`
 ## Prerequisites
 
 ```bash
+# Check for --force flag to skip branch check
+FORCE_FLAG=""
+if [[ "$ARGUMENTS" == *"--force"* ]]; then
+    FORCE_FLAG="true"
+    ARGUMENTS="${ARGUMENTS//--force/}"
+    ARGUMENTS="${ARGUMENTS# }"
+fi
+
 # Verify on main/master or a release branch
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-if [[ "$BRANCH" =~ ^[0-9]{3}- ]]; then
+if [[ "$BRANCH" =~ ^[0-9]{3}- ]] && [ -z "$FORCE_FLAG" ]; then
     echo "⚠️  Currently on feature branch: $BRANCH"
     echo "   Bugfixes should typically branch from main"
     echo ""
-    read -p "Continue anyway? (y/n) " -n 1 -r
+    echo "   Options:"
+    echo "   1. Switch to main first: git checkout main"
+    echo "   2. Use --force to continue on current branch"
     echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 0
-    fi
+    exit 1
 fi
 ```
 

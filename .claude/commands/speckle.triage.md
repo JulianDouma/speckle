@@ -12,12 +12,38 @@ Review, prioritize, and sync issues between GitHub and beads.
 $ARGUMENTS
 ```
 
-Options:
-- `--sync` - Sync all open GitHub issues to beads
-- `--review` - Interactive review of unprocessed issues
-- `--stale` - Find stale issues that need attention
+**Options**:
+| Option | Description |
+|--------|-------------|
+| (none) | Show triage dashboard overview |
+| `--sync` | Sync all open GitHub issues to beads |
+| `--stale` | Find stale issues that need attention |
+| `--priority <id> <0-4>` | Set priority for specific issue |
+| `--labels <id> <labels>` | Add labels to specific issue |
+| `--start <id>` | Start work on issue (set in_progress) |
+| `--block <id> <reason>` | Block issue with reason |
+| `--close <id>` | Close issue |
+| `--list` | List issues needing triage (no priority set) |
 
-Example: `/speckle.triage --review`
+**Examples**:
+```bash
+# View dashboard
+/speckle.triage
+
+# Sync GitHub issues
+/speckle.triage --sync
+
+# Set priority
+/speckle.triage --priority speckle-abc 1
+
+# Start work
+/speckle.triage --start speckle-xyz
+
+# Find stale issues
+/speckle.triage --stale
+```
+
+**Note**: The old `--review` interactive mode is deprecated. Use specific actions instead.
 
 ## Prerequisites
 
@@ -50,17 +76,92 @@ fi
 ```bash
 ARGS="$ARGUMENTS"
 ACTION=""
+TARGET_ID=""
+ACTION_VALUE=""
 
+# Parse arguments
 if [[ "$ARGS" == *"--sync"* ]]; then
     ACTION="sync"
-elif [[ "$ARGS" == *"--review"* ]]; then
-    ACTION="review"
 elif [[ "$ARGS" == *"--stale"* ]]; then
     ACTION="stale"
+elif [[ "$ARGS" == *"--list"* ]]; then
+    ACTION="list"
+elif [[ "$ARGS" =~ --priority[[:space:]]+([a-z0-9-]+)[[:space:]]+([0-4]) ]]; then
+    ACTION="priority"
+    TARGET_ID="${BASH_REMATCH[1]}"
+    ACTION_VALUE="${BASH_REMATCH[2]}"
+elif [[ "$ARGS" =~ --labels[[:space:]]+([a-z0-9-]+)[[:space:]]+(.+) ]]; then
+    ACTION="labels"
+    TARGET_ID="${BASH_REMATCH[1]}"
+    ACTION_VALUE="${BASH_REMATCH[2]}"
+elif [[ "$ARGS" =~ --start[[:space:]]+([a-z0-9-]+) ]]; then
+    ACTION="start"
+    TARGET_ID="${BASH_REMATCH[1]}"
+elif [[ "$ARGS" =~ --block[[:space:]]+([a-z0-9-]+)[[:space:]]+(.+) ]]; then
+    ACTION="block"
+    TARGET_ID="${BASH_REMATCH[1]}"
+    ACTION_VALUE="${BASH_REMATCH[2]}"
+elif [[ "$ARGS" =~ --close[[:space:]]+([a-z0-9-]+) ]]; then
+    ACTION="close"
+    TARGET_ID="${BASH_REMATCH[1]}"
+elif [[ "$ARGS" == *"--review"* ]]; then
+    echo "⚠️  --review (interactive mode) is deprecated"
+    echo ""
+    echo "Use specific actions instead:"
+    echo "  /speckle.triage --priority <id> <0-4>"
+    echo "  /speckle.triage --labels <id> <labels>"
+    echo "  /speckle.triage --start <id>"
+    echo "  /speckle.triage --block <id> <reason>"
+    echo "  /speckle.triage --close <id>"
+    echo "  /speckle.triage --list"
+    exit 1
 else
     # Default: show dashboard
     ACTION="dashboard"
 fi
+```
+
+## Batch Actions
+
+```bash
+# Handle single-issue batch actions
+case "$ACTION" in
+    priority)
+        bd update "$TARGET_ID" --priority "$ACTION_VALUE"
+        log_success "Priority set to P$ACTION_VALUE for $TARGET_ID"
+        exit 0
+        ;;
+    labels)
+        bd update "$TARGET_ID" --labels "$ACTION_VALUE"
+        log_success "Labels added to $TARGET_ID"
+        exit 0
+        ;;
+    start)
+        bd update "$TARGET_ID" --status in_progress
+        log_success "Started work on $TARGET_ID"
+        exit 0
+        ;;
+    block)
+        bd update "$TARGET_ID" --status blocked
+        bd comment "$TARGET_ID" "Blocked: $ACTION_VALUE" 2>/dev/null || true
+        log_success "Blocked $TARGET_ID: $ACTION_VALUE"
+        exit 0
+        ;;
+    close)
+        bd close "$TARGET_ID"
+        log_success "Closed $TARGET_ID"
+        exit 0
+        ;;
+    list)
+        echo "📋 Issues needing triage"
+        echo "════════════════════════════════════════════════════════════"
+        echo ""
+        bd list --status open 2>/dev/null | head -30
+        echo ""
+        echo "Use: /speckle.triage --priority <id> <0-4> to set priorities"
+        exit 0
+        ;;
+esac
 ```
 
 ## Dashboard View
@@ -190,82 +291,6 @@ https://github.com/$(gh repo view --json nameWithOwner --jq '.nameWithOwner')/is
     echo "✅ Sync complete"
     echo ""
     echo "Run \`bd ready\` to see available work"
-    
-    exit 0
-fi
-```
-
-## Review Action
-
-```bash
-if [ "$ACTION" = "review" ]; then
-    echo "📋 Interactive Issue Review"
-    echo "════════════════════════════════════════════════════════════"
-    echo ""
-    
-    # Get open beads issues without priority action
-    bd list --status open 2>/dev/null | head -20 | while read -r line; do
-        # Extract issue ID (first word)
-        ISSUE_ID=$(echo "$line" | awk '{print $1}')
-        
-        if [ -z "$ISSUE_ID" ]; then
-            continue
-        fi
-        
-        echo ""
-        echo "────────────────────────────────────────────────────────────"
-        bd show "$ISSUE_ID" 2>/dev/null | head -15
-        echo ""
-        
-        echo "Actions for $ISSUE_ID:"
-        echo "  1) Set priority (P0-P4)"
-        echo "  2) Add labels"
-        echo "  3) Start work (in_progress)"
-        echo "  4) Block issue"
-        echo "  5) Close issue"
-        echo "  6) Skip"
-        echo "  q) Quit review"
-        echo ""
-        read -p "Action [1-6/q]: " REVIEW_ACTION
-        
-        case "$REVIEW_ACTION" in
-            1)
-                read -p "Priority (0-4): " NEW_PRIORITY
-                bd update "$ISSUE_ID" --priority "$NEW_PRIORITY"
-                log_success "Priority updated"
-                ;;
-            2)
-                read -p "Labels (comma-separated): " NEW_LABELS
-                bd update "$ISSUE_ID" --labels "$NEW_LABELS"
-                log_success "Labels added"
-                ;;
-            3)
-                bd update "$ISSUE_ID" --status in_progress
-                log_success "Started work on $ISSUE_ID"
-                ;;
-            4)
-                read -p "Blocked by (issue ID or reason): " BLOCKED_BY
-                bd update "$ISSUE_ID" --status blocked
-                bd comment "$ISSUE_ID" "Blocked: $BLOCKED_BY"
-                log_success "Issue blocked"
-                ;;
-            5)
-                bd close "$ISSUE_ID"
-                log_success "Issue closed"
-                ;;
-            6)
-                echo "Skipped"
-                ;;
-            q|Q)
-                echo "Review ended"
-                exit 0
-                ;;
-        esac
-    done
-    
-    echo ""
-    echo "════════════════════════════════════════════════════════════"
-    echo "✅ Review complete"
     
     exit 0
 fi
