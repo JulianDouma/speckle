@@ -221,199 +221,322 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
     <!-- Auto-refresh disabled when terminal is open - handled by JavaScript -->
     <title>Speckle Board</title>
     <style>
-        /* === T001: Light theme (default) === */
+        /* ============================================================
+           FLUENT 1 DESIGN SYSTEM - Microsoft Office/365 Style
+           Based on Syncfusion Fluent Theme & Office UI Fabric
+           ============================================================ */
+        
+        /* === DESIGN TOKENS === */
         :root {{
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text: #1e293b;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --header-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            /* Fluent 1 Primary - Microsoft Blue */
+            --fluent-primary: #0078d4;
+            --fluent-primary-dark: #106ebe;
+            --fluent-primary-darker: #005a9e;
+            --fluent-primary-light: #2b88d8;
+            --fluent-primary-lighter: #c7e0f4;
             
-            /* Column backgrounds */
-            --backlog: #f1f5f9;
-            --progress: #dbeafe;
-            --blocked: #fee2e2;
-            --done: #d1fae5;
+            /* Semantic Colors */
+            --fluent-red: #d13438;
+            --fluent-orange: #ca5010;
+            --fluent-yellow: #ffb900;
+            --fluent-green: #107c10;
+            --fluent-cyan: #038387;
+            --fluent-purple: #8764b8;
+            
+            /* Gray Scale (Light Theme) */
+            --fluent-gray-10: #faf9f8;
+            --fluent-gray-20: #f3f2f1;
+            --fluent-gray-30: #edebe9;
+            --fluent-gray-40: #e1dfdd;
+            --fluent-gray-50: #d2d0ce;
+            --fluent-gray-60: #c8c6c4;
+            --fluent-gray-90: #a19f9d;
+            --fluent-gray-110: #8a8886;
+            --fluent-gray-130: #605e5c;
+            --fluent-gray-150: #3b3a39;
+            --fluent-gray-160: #323130;
+            --fluent-gray-190: #201f1e;
+            
+            /* Semantic Mappings */
+            --bg: var(--fluent-gray-10);
+            --card-bg: #ffffff;
+            --text: var(--fluent-gray-190);
+            --text-muted: var(--fluent-gray-130);
+            --border: var(--fluent-gray-40);
+            --border-strong: var(--fluent-gray-60);
+            
+            /* Column backgrounds - subtle tints */
+            --backlog: var(--fluent-gray-20);
+            --progress: #deecf9;
+            --blocked: #fed9cc;
+            --done: #dff6dd;
             
             /* Priority colors */
-            --p0: #dc2626;
-            --p1: #ea580c;
-            --p2: #f59e0b;
-            --p3: #10b981;
-            --p4: #6b7280;
+            --p0: var(--fluent-red);
+            --p1: var(--fluent-red);
+            --p2: var(--fluent-orange);
+            --p3: var(--fluent-green);
+            --p4: var(--fluent-gray-110);
             
-            /* Shadows */
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
-            --shadow-header: 0 2px 4px rgba(0,0,0,0.1);
+            /* Fluent Shadows */
+            --shadow-4: 0 1.6px 3.6px 0 rgba(0,0,0,0.132), 0 0.3px 0.9px 0 rgba(0,0,0,0.108);
+            --shadow-8: 0 3.2px 7.2px 0 rgba(0,0,0,0.132), 0 0.6px 1.8px 0 rgba(0,0,0,0.108);
+            --shadow-16: 0 6.4px 14.4px 0 rgba(0,0,0,0.132), 0 1.2px 3.6px 0 rgba(0,0,0,0.108);
+            --shadow-64: 0 25.6px 57.6px 0 rgba(0,0,0,0.22), 0 4.8px 14.4px 0 rgba(0,0,0,0.18);
             
-            /* Badge backgrounds (light mode) */
-            --badge-p0-bg: #fef2f2;
-            --badge-p0-text: #dc2626;
-            --badge-p2-bg: #fffbeb;
-            --badge-p2-text: #b45309;
-            --badge-p3-bg: #f0fdf4;
-            --badge-p3-text: #15803d;
-            --type-bg: #f1f5f9;
-            --type-bug-bg: #fef2f2;
-            --type-bug-text: #b91c1c;
-            --type-feature-bg: #f5f3ff;
-            --type-feature-text: #6d28d9;
-            --type-epic-bg: #fff7ed;
-            --type-epic-text: #c2410c;
-            --label-bg: #e0e7ff;
-            --label-text: #3730a3;
+            /* Legacy shadow mappings */
+            --shadow-sm: var(--shadow-4);
+            --shadow-md: var(--shadow-8);
             
-            /* Column header border */
-            --column-border: rgba(0,0,0,0.1);
+            /* Badge backgrounds */
+            --badge-p0-bg: rgba(209, 52, 56, 0.15);
+            --badge-p0-text: var(--fluent-red);
+            --badge-p2-bg: rgba(202, 80, 16, 0.15);
+            --badge-p2-text: #a33d10;
+            --badge-p3-bg: rgba(16, 124, 16, 0.15);
+            --badge-p3-text: #0b6a0b;
+            
+            /* Type badges */
+            --type-bg: var(--fluent-gray-30);
+            --type-bug-bg: rgba(209, 52, 56, 0.15);
+            --type-bug-text: var(--fluent-red);
+            --type-feature-bg: rgba(0, 120, 212, 0.15);
+            --type-feature-text: var(--fluent-primary);
+            --type-epic-bg: rgba(135, 100, 184, 0.15);
+            --type-epic-text: var(--fluent-purple);
+            
+            /* Label badges */
+            --label-bg: var(--fluent-gray-30);
+            --label-text: var(--fluent-gray-160);
+            
+            /* Column header accent */
+            --column-border: var(--fluent-gray-50);
+            
+            /* Motion */
+            --ease-1: cubic-bezier(0.1, 0.9, 0.2, 1);
+            --duration-1: 100ms;
+            --duration-2: 200ms;
         }}
         
-        /* === T001: Dark theme via data attribute === */
-        /* Midnight black theme - true dark mode */
+        /* === DARK THEME === */
         [data-theme="dark"] {{
-            --bg: #000000;
-            --card-bg: #0a0a0a;
-            --text: #f1f5f9;
-            --text-muted: #a1a1aa;
-            --border: #27272a;
-            --header-gradient: linear-gradient(135deg, #3730a3 0%, #581c87 100%);
+            --fluent-gray-10: #1b1a19;
+            --fluent-gray-20: #252423;
+            --fluent-gray-30: #292827;
+            --fluent-gray-40: #323130;
+            --fluent-gray-50: #3b3a39;
+            --fluent-gray-60: #484644;
+            --fluent-gray-90: #797775;
+            --fluent-gray-110: #979593;
+            --fluent-gray-130: #b3b0ad;
+            --fluent-gray-150: #d2d0ce;
+            --fluent-gray-160: #e1dfdd;
+            --fluent-gray-190: #f3f2f1;
             
-            /* Column backgrounds - near black with subtle color hints */
-            --backlog: #0a0a0a;
-            --progress: #0a1628;
-            --blocked: #1a0a0a;
-            --done: #0a1a0a;
+            --fluent-primary: #2899f5;
+            --fluent-primary-dark: #0078d4;
+            --fluent-primary-light: #6cb8f6;
             
-            /* Shadows - subtle glow effect */
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.6);
-            --shadow-header: 0 2px 8px rgba(0,0,0,0.5);
+            --bg: #1b1a19;
+            --card-bg: #252423;
+            --text: #f3f2f1;
+            --text-muted: #b3b0ad;
+            --border: #484644;
+            --border-strong: #605e5c;
             
-            /* Badge backgrounds (dark mode - vibrant on black) */
-            --badge-p0-bg: #2a0a0a;
-            --badge-p0-text: #f87171;
-            --badge-p2-bg: #2a1a03;
-            --badge-p2-text: #fbbf24;
-            --badge-p3-bg: #052e16;
-            --badge-p3-text: #4ade80;
-            --type-bg: #18181b;
-            --type-bug-bg: #2a0a0a;
-            --type-bug-text: #f87171;
-            --type-feature-bg: #1e1033;
-            --type-feature-text: #a78bfa;
-            --type-epic-bg: #2a1407;
-            --type-epic-text: #fb923c;
-            --label-bg: #1e1b4b;
-            --label-text: #a5b4fc;
+            --backlog: #252423;
+            --progress: #0a3d62;
+            --blocked: #4a1e1b;
+            --done: #1a3d1a;
             
-            /* Column header border */
-            --column-border: rgba(255,255,255,0.1);
+            --shadow-4: 0 1.6px 3.6px 0 rgba(0,0,0,0.4), 0 0.3px 0.9px 0 rgba(0,0,0,0.32);
+            --shadow-8: 0 3.2px 7.2px 0 rgba(0,0,0,0.4), 0 0.6px 1.8px 0 rgba(0,0,0,0.32);
+            --shadow-16: 0 6.4px 14.4px 0 rgba(0,0,0,0.4), 0 1.2px 3.6px 0 rgba(0,0,0,0.32);
+            
+            --badge-p0-bg: rgba(243, 135, 135, 0.2);
+            --badge-p0-text: #f38787;
+            --badge-p2-bg: rgba(255, 185, 0, 0.2);
+            --badge-p2-text: #ffb900;
+            --badge-p3-bg: rgba(146, 195, 83, 0.2);
+            --badge-p3-text: #92c353;
+            
+            --type-bg: #3b3a39;
+            --type-bug-bg: rgba(243, 135, 135, 0.2);
+            --type-bug-text: #f38787;
+            --type-feature-bg: rgba(40, 153, 245, 0.2);
+            --type-feature-text: #6cb8f6;
+            --type-epic-bg: rgba(177, 151, 252, 0.2);
+            --type-epic-text: #b197fc;
+            
+            --label-bg: #3b3a39;
+            --label-text: #d2d0ce;
+            
+            --column-border: #484644;
         }}
         
-        /* === T002: System preference detection (when no explicit choice) === */
-        /* Midnight black theme - matches [data-theme="dark"] */
+        /* === SYSTEM PREFERENCE === */
         @media (prefers-color-scheme: dark) {{
             :root:not([data-theme]) {{
-                --bg: #000000;
-                --card-bg: #0a0a0a;
-                --text: #f1f5f9;
-                --text-muted: #a1a1aa;
-                --border: #27272a;
-                --header-gradient: linear-gradient(135deg, #3730a3 0%, #581c87 100%);
-                --backlog: #0a0a0a;
-                --progress: #0a1628;
-                --blocked: #1a0a0a;
-                --done: #0a1a0a;
-                --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
-                --shadow-md: 0 4px 6px rgba(0,0,0,0.6);
-                --shadow-header: 0 2px 8px rgba(0,0,0,0.5);
-                --badge-p0-bg: #2a0a0a;
-                --badge-p0-text: #f87171;
-                --badge-p2-bg: #2a1a03;
-                --badge-p2-text: #fbbf24;
-                --badge-p3-bg: #052e16;
-                --badge-p3-text: #4ade80;
-                --type-bg: #18181b;
-                --type-bug-bg: #2a0a0a;
-                --type-bug-text: #f87171;
-                --type-feature-bg: #1e1033;
-                --type-feature-text: #a78bfa;
-                --type-epic-bg: #2a1407;
-                --type-epic-text: #fb923c;
-                --label-bg: #1e1b4b;
-                --label-text: #a5b4fc;
-                --column-border: rgba(255,255,255,0.08);
+                --fluent-gray-10: #1b1a19;
+                --fluent-gray-20: #252423;
+                --fluent-gray-30: #292827;
+                --fluent-gray-40: #323130;
+                --fluent-gray-50: #3b3a39;
+                --fluent-gray-60: #484644;
+                --fluent-gray-90: #797775;
+                --fluent-gray-110: #979593;
+                --fluent-gray-130: #b3b0ad;
+                --fluent-gray-150: #d2d0ce;
+                --fluent-gray-160: #e1dfdd;
+                --fluent-gray-190: #f3f2f1;
+                --fluent-primary: #2899f5;
+                --fluent-primary-dark: #0078d4;
+                --fluent-primary-light: #6cb8f6;
+                --bg: #1b1a19;
+                --card-bg: #252423;
+                --text: #f3f2f1;
+                --text-muted: #b3b0ad;
+                --border: #484644;
+                --border-strong: #605e5c;
+                --backlog: #252423;
+                --progress: #0a3d62;
+                --blocked: #4a1e1b;
+                --done: #1a3d1a;
+                --shadow-4: 0 1.6px 3.6px 0 rgba(0,0,0,0.4), 0 0.3px 0.9px 0 rgba(0,0,0,0.32);
+                --shadow-8: 0 3.2px 7.2px 0 rgba(0,0,0,0.4), 0 0.6px 1.8px 0 rgba(0,0,0,0.32);
+                --shadow-16: 0 6.4px 14.4px 0 rgba(0,0,0,0.4), 0 1.2px 3.6px 0 rgba(0,0,0,0.32);
+                --badge-p0-bg: rgba(243, 135, 135, 0.2);
+                --badge-p0-text: #f38787;
+                --badge-p2-bg: rgba(255, 185, 0, 0.2);
+                --badge-p2-text: #ffb900;
+                --badge-p3-bg: rgba(146, 195, 83, 0.2);
+                --badge-p3-text: #92c353;
+                --type-bg: #3b3a39;
+                --type-bug-bg: rgba(243, 135, 135, 0.2);
+                --type-bug-text: #f38787;
+                --type-feature-bg: rgba(40, 153, 245, 0.2);
+                --type-feature-text: #6cb8f6;
+                --type-epic-bg: rgba(177, 151, 252, 0.2);
+                --type-epic-text: #b197fc;
+                --label-bg: #3b3a39;
+                --label-text: #d2d0ce;
+                --column-border: #484644;
             }}
         }}
         
+        /* === BASE STYLES === */
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         
-        /* === T006: Smooth transitions === */
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+            font-size: 14px;
+            line-height: 20px;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            transition: background-color 0.2s ease, color 0.2s ease;
+            transition: background-color var(--duration-2) var(--ease-1), color var(--duration-2) var(--ease-1);
         }}
         
+        /* === HEADER (Fluent CommandBar) === */
         header {{
-            background: transparent;
+            background: var(--card-bg);
             color: var(--text);
-            padding: 1rem 1.5rem;
+            padding: 0 16px;
+            height: 44px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-4);
         }}
         
         header h1 {{
-            font-size: 1.25rem;
+            font-size: 16px;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 8px;
         }}
         
         .controls {{
             display: flex;
             align-items: center;
-            gap: 1rem;
-            font-size: 0.875rem;
+            gap: 12px;
         }}
         
-        /* === T004: Theme toggle button === */
+        /* === THEME TOGGLE (Fluent Toggle) === */
         .theme-toggle {{
-            background: var(--column-border);
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: var(--fluent-gray-90);
             border: none;
-            font-size: 1.1rem;
+            border-radius: 10px;
             cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.375rem;
-            transition: background 0.2s;
-            line-height: 1;
+            transition: background var(--duration-1) var(--ease-1);
+            padding: 0;
+        }}
+        
+        .theme-toggle::after {{
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: var(--shadow-4);
+            transition: transform var(--duration-1) var(--ease-1);
         }}
         
         .theme-toggle:hover {{
-            background: var(--border);
+            background: var(--fluent-gray-110);
         }}
         
+        .theme-toggle[data-active="true"] {{
+            background: var(--fluent-primary);
+        }}
+        
+        .theme-toggle[data-active="true"]::after {{
+            transform: translateX(20px);
+        }}
+        
+        /* === REFRESH BADGE === */
         .refresh-badge {{
-            background: var(--column-border);
+            background: var(--fluent-gray-30);
             color: var(--text-muted);
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 2px;
+            font-size: 12px;
+            font-weight: 400;
         }}
         
+        /* === FILTER SELECT (Fluent Dropdown) === */
         .filter-select {{
+            appearance: none;
             background: var(--card-bg);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-strong);
             color: var(--text);
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
+            padding: 0 28px 0 8px;
+            height: 32px;
+            border-radius: 2px;
+            font-size: 14px;
+            font-family: inherit;
             cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23605e5c' d='M2.5 4.5L6 8l3.5-3.5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            transition: border-color var(--duration-1) var(--ease-1);
+        }}
+        
+        .filter-select:hover {{
+            border-color: var(--fluent-gray-130);
+        }}
+        
+        .filter-select:focus {{
+            outline: none;
+            border-color: var(--fluent-primary);
         }}
         
         .filter-select option {{
@@ -421,17 +544,17 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             color: var(--text);
         }}
         
+        /* === BOARD LAYOUT === */
         .board {{
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            padding: 1rem;
+            gap: 16px;
+            padding: 16px;
             max-width: 1600px;
             margin: 0 auto;
-            min-height: calc(100vh - 120px);
+            min-height: calc(100vh - 108px);
         }}
         
-        /* Responsive layout */
         @media (max-width: 1024px) {{
             .board {{ grid-template-columns: repeat(2, 1fr); }}
         }}
@@ -440,14 +563,15 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             .board {{ grid-template-columns: 1fr; }}
         }}
         
+        /* === COLUMNS (Fluent Surface) === */
         .column {{
             background: var(--backlog);
-            border-radius: 0.5rem;
-            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             display: flex;
             flex-direction: column;
             min-height: 200px;
-            transition: background-color 0.2s ease;
+            overflow: hidden;
         }}
         
         .column.in_progress {{ background: var(--progress); }}
@@ -458,93 +582,111 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--column-border);
+            padding: 12px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
         }}
+        
+        /* Status accent on column headers */
+        .column.open .column-header {{ border-left: 3px solid var(--fluent-gray-110); }}
+        .column.in_progress .column-header {{ border-left: 3px solid var(--fluent-primary); }}
+        .column.blocked .column-header {{ border-left: 3px solid var(--fluent-red); }}
+        .column.closed .column-header {{ border-left: 3px solid var(--fluent-green); }}
         
         .column-title {{
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 8px;
+            color: var(--text);
         }}
         
         .column-count {{
-            background: var(--column-border);
-            padding: 0.125rem 0.5rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
+            background: var(--fluent-gray-30);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
         }}
         
         .cards {{
             flex: 1;
             overflow-y: auto;
+            padding: 8px;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 8px;
         }}
         
-        /* Priority-colored cards */
+        /* === CARDS (Fluent DocumentCard) === */
         .card {{
             background: var(--card-bg);
-            border-radius: 0.375rem;
-            padding: 0.75rem;
-            box-shadow: var(--shadow-sm);
-            border-left: 3px solid var(--p3);
-            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s ease;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+            border-left: 3px solid var(--fluent-gray-110);
+            transition: box-shadow var(--duration-2) var(--ease-1), 
+                        border-color var(--duration-1) var(--ease-1),
+                        transform var(--duration-2) var(--ease-1);
         }}
         
         .card:hover {{
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+            box-shadow: var(--shadow-8);
+            border-color: var(--border-strong);
+            transform: translateY(-2px);
         }}
         
-        .card.p0, .card.p1 {{ border-left-color: var(--p0); }}
-        .card.p2 {{ border-left-color: var(--p2); }}
-        .card.p3 {{ border-left-color: var(--p3); }}
-        .card.p4 {{ border-left-color: var(--p4); }}
+        .card.p0, .card.p1 {{ border-left-color: var(--fluent-red); }}
+        .card.p2 {{ border-left-color: var(--fluent-orange); }}
+        .card.p3 {{ border-left-color: var(--fluent-green); }}
+        .card.p4 {{ border-left-color: var(--fluent-gray-110); }}
         
         .card-header {{
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
         }}
         
         .card-id {{
-            font-family: monospace;
-            font-size: 0.7rem;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 11px;
             color: var(--text-muted);
         }}
         
+        /* === BADGES (Fluent Tag) === */
         .priority-badge {{
-            font-size: 0.65rem;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 2px;
             font-weight: 600;
-            transition: background-color 0.2s ease, color 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
         
         .priority-badge.p0, .priority-badge.p1 {{
             background: var(--badge-p0-bg);
             color: var(--badge-p0-text);
         }}
+        
         .priority-badge.p2 {{
             background: var(--badge-p2-bg);
             color: var(--badge-p2-text);
         }}
+        
         .priority-badge.p3, .priority-badge.p4 {{
             background: var(--badge-p3-bg);
             color: var(--badge-p3-text);
         }}
         
         .card-title {{
-            font-size: 0.8125rem;
-            font-weight: 500;
-            line-height: 1.4;
-            margin-bottom: 0.5rem;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 20px;
+            margin-bottom: 8px;
+            color: var(--text);
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -555,51 +697,53 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.7rem;
+            font-size: 12px;
             color: var(--text-muted);
         }}
         
-        /* Type badges */
+        /* === TYPE BADGES === */
         .type-badge {{
             background: var(--type-bg);
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-            transition: background-color 0.2s ease, color 0.2s ease;
+            color: var(--text-muted);
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
         }}
         
         .type-badge.bug {{ background: var(--type-bug-bg); color: var(--type-bug-text); }}
         .type-badge.feature {{ background: var(--type-feature-bg); color: var(--type-feature-text); }}
         .type-badge.epic {{ background: var(--type-epic-bg); color: var(--type-epic-text); }}
         
-        /* Labels */
+        /* === LABELS === */
         .labels {{
             display: flex;
             flex-wrap: wrap;
-            gap: 0.25rem;
-            margin-top: 0.5rem;
+            gap: 4px;
+            margin-top: 8px;
         }}
         
         .label {{
             background: var(--label-bg);
             color: var(--label-text);
-            font-size: 0.625rem;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-            transition: background-color 0.2s ease, color 0.2s ease;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 2px;
         }}
         
         .empty {{
             color: var(--text-muted);
             text-align: center;
-            padding: 2rem;
-            font-size: 0.875rem;
+            padding: 32px;
+            font-size: 14px;
         }}
         
-        /* === T020-T024: GitHub Integration Styles === */
+        /* === GITHUB LINK === */
         .card-actions {{
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 8px;
         }}
         
         .github-link {{
@@ -607,7 +751,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             text-decoration: none;
             display: flex;
             align-items: center;
-            transition: color 0.2s ease;
+            transition: color var(--duration-1) var(--ease-1);
         }}
         
         .github-link:hover {{
@@ -619,50 +763,105 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             height: 14px;
         }}
         
+        /* === FOOTER === */
         footer {{
             text-align: center;
-            padding: 1rem;
+            padding: 16px;
             color: var(--text-muted);
-            font-size: 0.75rem;
-            transition: color 0.2s ease;
+            font-size: 12px;
+            border-top: 1px solid var(--border);
         }}
         
-        /* === Terminal Mirroring Styles === */
+        /* === BUTTONS (Fluent Button) === */
+        .terminal-btn, .session-btn {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 0 12px;
+            height: 28px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+            border-radius: 2px;
+            border: 1px solid var(--border-strong);
+            background: var(--card-bg);
+            color: var(--text);
+            cursor: pointer;
+            transition: background var(--duration-1) var(--ease-1), 
+                        border-color var(--duration-1) var(--ease-1);
+        }}
+        
+        .terminal-btn:hover, .session-btn:hover {{
+            background: var(--fluent-gray-20);
+        }}
+        
+        .terminal-btn.danger, .session-btn.danger {{
+            border-color: var(--fluent-red);
+            color: var(--fluent-red);
+        }}
+        
+        .terminal-btn.danger:hover, .session-btn.danger:hover {{
+            background: rgba(209, 52, 56, 0.1);
+        }}
+        
+        .session-btn.primary {{
+            background: var(--fluent-primary);
+            border-color: var(--fluent-primary);
+            color: #ffffff;
+        }}
+        
+        .session-btn.primary:hover {{
+            background: var(--fluent-primary-dark);
+            border-color: var(--fluent-primary-dark);
+        }}
+        
+        .session-btn:disabled {{
+            opacity: 0.5;
+            cursor: not-allowed;
+        }}
+        
+        /* === TERMINAL STYLES === */
         .terminal-indicator {{
             display: inline-flex;
             align-items: center;
-            gap: 0.25rem;
-            font-size: 0.65rem;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-            background: var(--progress);
-            color: var(--text);
+            gap: 4px;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 2px;
+            background: var(--fluent-primary-lighter);
+            color: var(--fluent-primary-darker);
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background var(--duration-1) var(--ease-1);
+        }}
+        
+        [data-theme="dark"] .terminal-indicator {{
+            background: rgba(40, 153, 245, 0.2);
+            color: var(--fluent-primary-light);
         }}
         
         .terminal-indicator:hover {{
-            background: var(--border);
+            background: var(--fluent-gray-40);
         }}
         
         .terminal-indicator .pulse {{
             width: 6px;
             height: 6px;
-            background: #22c55e;
+            background: var(--fluent-green);
             border-radius: 50%;
             animation: pulse 2s infinite;
         }}
         
         @keyframes pulse {{
             0%, 100% {{ opacity: 1; }}
-            50% {{ opacity: 0.5; }}
+            50% {{ opacity: 0.4; }}
         }}
         
         .terminal-drawer {{
             display: none;
-            margin-top: 0.75rem;
+            margin-top: 12px;
             border-top: 1px solid var(--border);
-            padding-top: 0.75rem;
+            padding-top: 12px;
         }}
         
         .terminal-drawer.open {{
@@ -670,9 +869,9 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
         
         .terminal-container {{
-            background: #000;
-            border-radius: 0.375rem;
-            padding: 0.5rem;
+            background: #000000;
+            border-radius: 4px;
+            padding: 8px;
             height: 300px;
             overflow: hidden;
             position: relative;
@@ -684,76 +883,51 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         
         .terminal-controls {{
             display: flex;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
+            gap: 8px;
+            margin-top: 8px;
             flex-wrap: wrap;
         }}
         
-        .terminal-btn {{
-            font-size: 0.7rem;
-            padding: 0.25rem 0.5rem;
-            border: 1px solid var(--border);
-            background: var(--card-bg);
-            color: var(--text);
-            border-radius: 0.25rem;
-            cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
-        }}
-        
-        .terminal-btn:hover {{
-            background: var(--border);
-        }}
-        
-        .terminal-btn.danger {{
-            border-color: var(--p0);
-            color: var(--p0);
-        }}
-        
-        .terminal-btn.danger:hover {{
-            background: var(--badge-p0-bg);
-        }}
-        
         .terminal-status {{
-            font-size: 0.65rem;
+            font-size: 11px;
             color: var(--text-muted);
             margin-left: auto;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 4px;
         }}
         
         .terminal-status.connected {{
-            color: #22c55e;
+            color: var(--fluent-green);
         }}
         
         .terminal-status.disconnected {{
-            color: var(--p0);
+            color: var(--fluent-red);
         }}
         
-        /* === Session Status Styles === */
+        /* === SESSION STATUS === */
         .session-indicator {{
             display: inline-flex;
             align-items: center;
-            gap: 0.25rem;
-            font-size: 0.65rem;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-            transition: background 0.2s;
+            gap: 4px;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 2px;
         }}
         
         .session-indicator.running {{
-            background: #052e16;
-            color: #4ade80;
+            background: rgba(16, 124, 16, 0.15);
+            color: var(--fluent-green);
         }}
         
         .session-indicator.stuck {{
-            background: #2a1a03;
-            color: #fbbf24;
+            background: rgba(255, 185, 0, 0.15);
+            color: var(--fluent-yellow);
         }}
         
         .session-indicator.spawning {{
-            background: #0a1628;
-            color: #60a5fa;
+            background: rgba(0, 120, 212, 0.15);
+            color: var(--fluent-primary);
         }}
         
         .session-indicator.completed {{
@@ -767,78 +941,36 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
         
         .session-duration {{
-            font-family: monospace;
-            font-size: 0.65rem;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 11px;
             color: var(--text-muted);
-            margin-left: 0.25rem;
+            margin-left: 4px;
         }}
         
         .session-actions {{
             display: flex;
-            gap: 0.375rem;
-            margin-top: 0.5rem;
+            gap: 6px;
+            margin-top: 8px;
             flex-wrap: wrap;
-        }}
-        
-        .session-btn {{
-            font-size: 0.65rem;
-            padding: 0.25rem 0.5rem;
-            border: 1px solid var(--border);
-            background: var(--card-bg);
-            color: var(--text);
-            border-radius: 0.25rem;
-            cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }}
-        
-        .session-btn:hover {{
-            background: var(--border);
-        }}
-        
-        .session-btn:disabled {{
-            opacity: 0.5;
-            cursor: not-allowed;
-        }}
-        
-        .session-btn.primary {{
-            background: #3b82f6;
-            border-color: #3b82f6;
-            color: white;
-        }}
-        
-        .session-btn.primary:hover {{
-            background: #2563eb;
-        }}
-        
-        .session-btn.danger {{
-            border-color: var(--p0);
-            color: var(--p0);
-        }}
-        
-        .session-btn.danger:hover {{
-            background: var(--badge-p0-bg);
         }}
         
         .session-info {{
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 8px;
             border-top: 1px dashed var(--border);
         }}
         
-        /* Modal overlay for full-screen terminal */
+        /* === MODAL === */
         .terminal-modal {{
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.85);
             z-index: 1000;
-            padding: 1rem;
+            padding: 16px;
         }}
         
         .terminal-modal.open {{
@@ -850,20 +982,44 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem;
-            color: #fff;
-            margin-bottom: 0.5rem;
+            padding: 8px;
+            color: #ffffff;
+            margin-bottom: 8px;
         }}
         
         .terminal-modal-content {{
             flex: 1;
-            background: #000;
-            border-radius: 0.5rem;
+            background: #000000;
+            border-radius: 4px;
             overflow: hidden;
         }}
         
         .terminal-modal .xterm {{
             height: 100%;
+        }}
+        
+        /* === FOCUS STYLES (Accessibility) === */
+        :focus-visible {{
+            outline: none;
+            box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--fluent-primary);
+        }}
+        
+        /* === REDUCED MOTION === */
+        @media (prefers-reduced-motion: reduce) {{
+            *, *::before, *::after {{
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }}
+        }}
+        
+        /* === HIGH CONTRAST === */
+        @media (prefers-contrast: high) {{
+            .card, .column {{
+                border-width: 2px;
+            }}
+            .terminal-btn, .session-btn {{
+                border-width: 2px;
+            }}
         }}
     </style>
     
@@ -913,8 +1069,9 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 const btn = document.querySelector('.theme-toggle');
                 if (btn) {{
                     const isDark = this.getCurrent() === 'dark';
-                    btn.textContent = isDark ? '☀️' : '🌙';
+                    btn.setAttribute('data-active', isDark);
                     btn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+                    btn.setAttribute('aria-pressed', isDark);
                 }}
             }}
         }};
@@ -925,11 +1082,11 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
 </head>
 <body>
     <header>
-        <h1>🔮 Speckle Board</h1>
+        <h1>◇ Speckle Board</h1>
         <div class="controls">
-            <button class="theme-toggle" onclick="ThemeController.toggle()" title="Toggle theme">🌙</button>
             {filter_html}
-            <span class="refresh-badge">⟳ {refresh}s</span>
+            <span class="refresh-badge">↻ {refresh}s</span>
+            <button class="theme-toggle" onclick="ThemeController.toggle()" title="Toggle dark mode" aria-label="Toggle dark mode"></button>
         </div>
     </header>
     
@@ -1579,21 +1736,15 @@ def render_column(status: str, issues: List[Dict[str, Any]], terminals: Optional
     terminals = terminals or {}
     sessions = sessions or {}
     
-    icons = {
-        'open': '📋',
-        'in_progress': '🔄',
-        'blocked': '🚫',
-        'closed': '✅'
-    }
+    # Fluent-style titles (no emoji icons - using left border accent instead)
     titles = {
-        'open': 'BACKLOG',
-        'in_progress': 'IN PROGRESS',
-        'blocked': 'BLOCKED',
-        'closed': 'DONE'
+        'open': 'Backlog',
+        'in_progress': 'In Progress',
+        'blocked': 'Blocked',
+        'closed': 'Done'
     }
     
-    icon = icons.get(status, '📋')
-    title = titles.get(status, status.upper())
+    title = titles.get(status, status.replace('_', ' ').title())
     count = len(issues)
     
     if issues:
@@ -1604,7 +1755,7 @@ def render_column(status: str, issues: List[Dict[str, Any]], terminals: Optional
     return f'''
     <div class="column {status}">
         <div class="column-header">
-            <span class="column-title">{icon} {title}</span>
+            <span class="column-title">{title}</span>
             <span class="column-count">{count}</span>
         </div>
         <div class="cards">

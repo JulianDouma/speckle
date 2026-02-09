@@ -261,19 +261,54 @@ def find_link_by_github(number: int) -> Optional[IssueLinkage]:
     return None
 
 
+def find_existing_bead_by_external_ref(external_ref: str) -> Optional[str]:
+    """Find bead by external reference (e.g., 'gh-27')."""
+    try:
+        result = subprocess.run(
+            ['bd', 'list', '--all', '--json', '--limit', '0'],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            issues = json.loads(result.stdout)
+            for issue in issues:
+                if issue.get('external_ref') == external_ref:
+                    return issue.get('id')
+    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
+        pass
+    return None
+
+
+def find_existing_bead_by_title(title: str) -> Optional[str]:
+    """Find bead by exact title match (for deduplication)."""
+    try:
+        result = subprocess.run(
+            ['bd', 'list', '--all', '--json', '--limit', '0'],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            issues = json.loads(result.stdout)
+            for issue in issues:
+                if issue.get('title', '').strip() == title.strip():
+                    return issue.get('id')
+    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
+        pass
+    return None
+
+
 # === T017: Label/Priority Mapping ===
+# Labels must match GitHub label names exactly (no spaces after colon)
 DEFAULT_PRIORITY_LABELS = {
-    0: "priority: critical",
-    1: "priority: high", 
-    2: "priority: medium",
-    3: "priority: low",
+    0: "priority:critical",
+    1: "priority:high", 
+    2: "priority:medium",
+    3: "priority:low",
     4: "",
 }
 
 DEFAULT_TYPE_LABELS = {
-    "bug": "type: bug",
-    "feature": "type: feature",
-    "epic": "type: epic",
+    "bug": "bug",
+    "feature": "enhancement",
+    "epic": "epic",
     "task": "",
 }
 
@@ -384,16 +419,17 @@ def push_to_github(client: GitHubClient, issue: dict) -> int:
 
 
 def pull_from_github(client: GitHubClient, gh_issue: dict) -> Optional[str]:
-    """T016: Pull GitHub issue to beads."""
+    """T016: Pull GitHub issue to beads with deduplication."""
     link = find_link_by_github(gh_issue['number'])
     
     title = gh_issue.get('title', 'Untitled')
     state = "closed" if gh_issue.get('state') == 'closed' else "open"
     priority = extract_priority_from_labels(gh_issue.get('labels', []))
     issue_type = extract_type_from_labels(gh_issue.get('labels', []))
+    external_ref = f"gh-{gh_issue['number']}"
     
     if link:
-        # Update existing bead
+        # Update existing linked bead
         try:
             subprocess.run([
                 'bd', 'update', link.bead_id,
@@ -404,40 +440,77 @@ def pull_from_github(client: GitHubClient, gh_issue: dict) -> Optional[str]:
             return link.bead_id
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return None
-    else:
-        # Create new bead
+    
+    # Check for existing bead by external_ref (deduplication)
+    existing_by_ref = find_existing_bead_by_external_ref(external_ref)
+    if existing_by_ref:
+        # Link existing bead and update it
+        new_link = IssueLinkage(
+            bead_id=existing_by_ref,
+            github_number=gh_issue['number'],
+            github_url=gh_issue['html_url'],
+            repo=client.repo or "",
+            sync_direction="gh_to_bead"
+        )
+        save_link(new_link)
+        return existing_by_ref
+    
+    # Check for existing bead by title (deduplication)
+    existing_by_title = find_existing_bead_by_title(title)
+    if existing_by_title:
+        # Link existing bead to GitHub issue
+        new_link = IssueLinkage(
+            bead_id=existing_by_title,
+            github_number=gh_issue['number'],
+            github_url=gh_issue['html_url'],
+            repo=client.repo or "",
+            sync_direction="gh_to_bead"
+        )
+        save_link(new_link)
+        # Update external_ref on existing bead
         try:
-            result = subprocess.run([
-                'bd', 'create',
-                '--title', title,
-                '--type', issue_type,
-                '--priority', str(priority),
-            ], capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                # Parse bead ID from output
-                for line in result.stdout.split('\n'):
-                    if 'Created issue:' in line:
-                        bead_id = line.split(':')[-1].strip()
-                        
-                        # Save linkage
-                        new_link = IssueLinkage(
-                            bead_id=bead_id,
-                            github_number=gh_issue['number'],
-                            github_url=gh_issue['html_url'],
-                            repo=client.repo or "",
-                            sync_direction="gh_to_bead"
-                        )
-                        save_link(new_link)
-                        
-                        # Close if needed
-                        if state == "closed":
-                            subprocess.run(['bd', 'close', bead_id], 
-                                         capture_output=True, timeout=10)
-                        
-                        return bead_id
+            subprocess.run([
+                'bd', 'update', existing_by_title,
+                '--external-ref', external_ref,
+            ], capture_output=True, timeout=10)
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pass
+        return existing_by_title
+    
+    # Create new bead with external_ref
+    try:
+        result = subprocess.run([
+            'bd', 'create',
+            '--title', title,
+            '--type', issue_type,
+            '--priority', str(priority),
+            '--external-ref', external_ref,
+        ], capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            # Parse bead ID from output
+            for line in result.stdout.split('\n'):
+                if 'Created issue:' in line:
+                    bead_id = line.split(':')[-1].strip()
+                    
+                    # Save linkage
+                    new_link = IssueLinkage(
+                        bead_id=bead_id,
+                        github_number=gh_issue['number'],
+                        github_url=gh_issue['html_url'],
+                        repo=client.repo or "",
+                        sync_direction="gh_to_bead"
+                    )
+                    save_link(new_link)
+                    
+                    # Close if needed
+                    if state == "closed":
+                        subprocess.run(['bd', 'close', bead_id], 
+                                     capture_output=True, timeout=10)
+                    
+                    return bead_id
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
     
     return None
 
