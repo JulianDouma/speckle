@@ -99,3 +99,36 @@ git checkout -b NNN-feature-name
 /speckle.sync
 /speckle.implement
 ```
+
+---
+
+## Dogfood Log
+
+### v0.2.0 Development (2026-02-09)
+
+**Feature:** Beads Comments Integration
+
+**Developed Using:** v0.1.0-bootstrap (manual sync, manual beads issue creation)
+
+#### What Worked Well
+- Beads issue tracking provided clear task visibility via `bd ready`
+- Task closure gave satisfying progress feedback
+- Branch naming convention (001-feature-name) worked seamlessly with spec-kit
+
+#### Pain Points Discovered
+- Manual sync is tedious → `/speckle.sync` automation is essential
+- No way to see progress mid-implementation → Added `/speckle.progress`
+- Needed status overview → Added `/speckle.status`
+
+#### Self-Validation
+- ✅ Created 14 bead issues for v0.2.0 tasks
+- ✅ Used `bd update --status in_progress` to claim tasks
+- ✅ Used `bd close` to complete tasks
+- ⏳ Comment recording will self-validate in v0.3.0 development
+
+#### Metrics
+- Tasks: 14 (T001-T014)
+- User Stories: 3 (US1: Core comments, US2: Status, US3: Manual notes)
+- Commands Added: 2 (`/speckle.status`, `/speckle.progress`)
+- Commands Updated: 1 (`/speckle.implement`)
+- Helper Scripts: 1 (`comments.sh`)

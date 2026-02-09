@@ -91,15 +91,31 @@ tasks.md   ─────────┘         ↕                      ↕
 
 ## Memory Across Sessions
 
-Every implementation is recorded:
+Every implementation is automatically recorded as a bead comment:
 
 ```bash
-# View implementation history
+# View implementation history for a task
 bd comments <issue-id>
 
-# See what was done
-bd show <issue-id>  # Description includes spec context
+# Example output:
+# ## Implementation Complete
+# **Task:** T001
+# **Actor:** claude
+# **Time:** 2026-02-09T19:30:00Z
+# 
+# ### Changes
+# - Lines added: +150
+# - Lines removed: -20
+# - Files changed: 3
+
+# Add manual progress notes during implementation
+/speckle.progress "Chose Redis over Memcached for caching"
+
+# Check overall feature status
+/speckle.status
 ```
+
+This means every new session can pick up exactly where the last one left off.
 
 ## Self-Hosted Development
 
