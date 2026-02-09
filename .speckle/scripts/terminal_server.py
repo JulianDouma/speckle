@@ -128,7 +128,7 @@ class TerminalManager:
         flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
         fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         
-        # Spawn subprocess
+        # Spawn subprocess using Popen (safer than fork in async context)
         env = os.environ.copy()
         env["TERM"] = "xterm-256color"
         env["SPECKLE_BEAD_ID"] = bead_id
@@ -137,19 +137,20 @@ class TerminalManager:
         
         working_dir = cwd if cwd else os.getcwd()
         
-        pid = os.fork()
-        if pid == 0:
-            # Child process
-            os.setsid()
-            os.dup2(slave_fd, 0)
-            os.dup2(slave_fd, 1)
-            os.dup2(slave_fd, 2)
-            os.close(master_fd)
-            os.close(slave_fd)
-            os.chdir(working_dir)
-            os.execvpe(command[0], command, env)
+        import subprocess
+        proc = subprocess.Popen(
+            command,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            cwd=working_dir,
+            env=env,
+            start_new_session=True,
+            close_fds=True,
+        )
+        pid = proc.pid
         
-        # Parent process
+        # Close slave in parent - child has it
         os.close(slave_fd)
         
         session = TerminalSession(
@@ -178,6 +179,7 @@ class TerminalManager:
     
     def _read_output(self, bead_id: str):
         """Background thread to read PTY output."""
+        import errno as err_module
         while bead_id in self.sessions:
             session = self.sessions.get(bead_id)
             if not session or not session.active:
@@ -202,9 +204,9 @@ class TerminalManager:
                             self._schedule_notify, session, data
                         )
             except OSError as e:
-                if e.errno == 5:  # EIO - process terminated
+                if e.errno == err_module.EIO:  # EIO - process terminated
                     break
-                elif e.errno == 11:  # EAGAIN - no data available
+                elif e.errno in (err_module.EAGAIN, err_module.EWOULDBLOCK):  # No data available
                     time.sleep(0.01)
                 else:
                     break
