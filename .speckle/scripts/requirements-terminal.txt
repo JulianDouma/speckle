@@ -1,0 +1,4 @@
+# Terminal Mirroring Dependencies
+# Install with: pip install -r .speckle/scripts/requirements-terminal.txt
+
+websockets>=12.0

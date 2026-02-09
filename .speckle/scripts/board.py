@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
 Speckle Kanban Board Server
-Lightweight visualization of beads issues
+Lightweight visualization of beads issues with real-time terminal mirroring.
 
 Phase 1: Foundation (T001-T005)
 Phase 2: UI Polish (T006-T010)
+Phase 3: Terminal Mirroring (WebSocket + xterm.js)
 """
 
 import http.server
@@ -14,12 +15,31 @@ import argparse
 import urllib.parse
 import webbrowser
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 # === Configuration ===
 DEFAULT_PORT = 8420
 DEFAULT_REFRESH = 5
 MAX_CLOSED = 15
+TERMINAL_WS_PORT = 8421  # WebSocket port for terminal server
+TERMINAL_DIR = Path(".speckle/terminals")
+
+
+# === Terminal Session Detection ===
+def get_active_terminals() -> Dict[str, Dict[str, Any]]:
+    """Get active terminal sessions from .speckle/terminals/*.json"""
+    terminals = {}
+    if TERMINAL_DIR.exists():
+        for json_file in TERMINAL_DIR.glob("*.json"):
+            try:
+                with open(json_file) as f:
+                    data = json.load(f)
+                    bead_id = data.get("bead_id", json_file.stem)
+                    terminals[bead_id] = data
+            except (json.JSONDecodeError, IOError):
+                pass
+    return terminals
 
 
 # === T002: Beads JSON Fetching ===
@@ -509,7 +529,151 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             font-size: 0.75rem;
             transition: color 0.2s ease;
         }}
+        
+        /* === Terminal Mirroring Styles === */
+        .terminal-indicator {{
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.65rem;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            background: var(--progress);
+            color: var(--text);
+            cursor: pointer;
+            transition: background 0.2s;
+        }}
+        
+        .terminal-indicator:hover {{
+            background: var(--border);
+        }}
+        
+        .terminal-indicator .pulse {{
+            width: 6px;
+            height: 6px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }}
+        
+        @keyframes pulse {{
+            0%, 100% {{ opacity: 1; }}
+            50% {{ opacity: 0.5; }}
+        }}
+        
+        .terminal-drawer {{
+            display: none;
+            margin-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            padding-top: 0.75rem;
+        }}
+        
+        .terminal-drawer.open {{
+            display: block;
+        }}
+        
+        .terminal-container {{
+            background: #000;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            height: 300px;
+            overflow: hidden;
+            position: relative;
+        }}
+        
+        .terminal-container .xterm {{
+            height: 100%;
+        }}
+        
+        .terminal-controls {{
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }}
+        
+        .terminal-btn {{
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }}
+        
+        .terminal-btn:hover {{
+            background: var(--border);
+        }}
+        
+        .terminal-btn.danger {{
+            border-color: var(--p0);
+            color: var(--p0);
+        }}
+        
+        .terminal-btn.danger:hover {{
+            background: var(--badge-p0-bg);
+        }}
+        
+        .terminal-status {{
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }}
+        
+        .terminal-status.connected {{
+            color: #22c55e;
+        }}
+        
+        .terminal-status.disconnected {{
+            color: var(--p0);
+        }}
+        
+        /* Modal overlay for full-screen terminal */
+        .terminal-modal {{
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            padding: 1rem;
+        }}
+        
+        .terminal-modal.open {{
+            display: flex;
+            flex-direction: column;
+        }}
+        
+        .terminal-modal-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }}
+        
+        .terminal-modal-content {{
+            flex: 1;
+            background: #000;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }}
+        
+        .terminal-modal .xterm {{
+            height: 100%;
+        }}
     </style>
+    
+    <!-- xterm.js from CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
     <!-- === T003: ThemeController - runs before body to prevent flash === -->
     <script>
         const ThemeController = {{
@@ -579,10 +743,335 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         {issue_count} issues • Last updated: {timestamp}
     </footer>
     
+    <!-- Full-screen terminal modal -->
+    <div id="terminal-modal" class="terminal-modal">
+        <div class="terminal-modal-header">
+            <span id="modal-title">Terminal: <span id="modal-bead-id"></span></span>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="terminal-btn" onclick="TerminalController.sendSignal(TerminalController.modalBeadId, 'SIGINT')">Send Ctrl+C</button>
+                <button class="terminal-btn danger" onclick="TerminalController.terminate(TerminalController.modalBeadId)">Terminate</button>
+                <button class="terminal-btn" onclick="TerminalController.closeModal()">Close (Esc)</button>
+            </div>
+        </div>
+        <div class="terminal-modal-content" id="modal-terminal-container"></div>
+    </div>
+    
     <script>
+        // === Terminal Controller ===
+        const TerminalController = {{
+            WS_PORT: {ws_port},
+            socket: null,
+            terminals: {{}},
+            fitAddons: {{}},
+            connected: false,
+            modalBeadId: null,
+            modalTerminal: null,
+            modalFitAddon: null,
+            
+            init() {{
+                this.connect();
+                this.setupModalHandlers();
+            }},
+            
+            connect() {{
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) return;
+                
+                try {{
+                    this.socket = new WebSocket(`ws://localhost:${{this.WS_PORT}}`);
+                    
+                    this.socket.onopen = () => {{
+                        console.log('Terminal WebSocket connected');
+                        this.connected = true;
+                        this.updateAllStatus();
+                        // Subscribe to all visible terminals
+                        document.querySelectorAll('[data-terminal-bead]').forEach(el => {{
+                            const beadId = el.dataset.terminalBead;
+                            this.subscribe(beadId);
+                        }});
+                    }};
+                    
+                    this.socket.onmessage = (event) => {{
+                        const data = JSON.parse(event.data);
+                        this.handleMessage(data);
+                    }};
+                    
+                    this.socket.onclose = () => {{
+                        console.log('Terminal WebSocket disconnected');
+                        this.connected = false;
+                        this.updateAllStatus();
+                        // Attempt reconnect after 5s
+                        setTimeout(() => this.connect(), 5000);
+                    }};
+                    
+                    this.socket.onerror = (err) => {{
+                        console.log('Terminal WebSocket error (server may not be running)');
+                    }};
+                }} catch (e) {{
+                    console.log('Could not connect to terminal server');
+                }}
+            }},
+            
+            handleMessage(data) {{
+                const beadId = data.bead_id;
+                
+                switch (data.type) {{
+                    case 'buffer':
+                    case 'output':
+                        // Write to inline terminal
+                        if (this.terminals[beadId]) {{
+                            this.terminals[beadId].write(data.data);
+                        }}
+                        // Write to modal terminal if open
+                        if (this.modalBeadId === beadId && this.modalTerminal) {{
+                            this.modalTerminal.write(data.data);
+                        }}
+                        break;
+                        
+                    case 'subscribed':
+                        console.log(`Subscribed to terminal: ${{beadId}}`);
+                        this.updateStatus(beadId, true);
+                        break;
+                        
+                    case 'terminated':
+                        console.log(`Terminal terminated: ${{beadId}}`);
+                        this.updateStatus(beadId, false);
+                        if (this.terminals[beadId]) {{
+                            this.terminals[beadId].write('\\r\\n\\x1b[31m[Terminal session ended]\\x1b[0m\\r\\n');
+                        }}
+                        break;
+                        
+                    case 'error':
+                        console.error('Terminal error:', data.message);
+                        break;
+                }}
+            }},
+            
+            subscribe(beadId) {{
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) {{
+                    this.socket.send(JSON.stringify({{
+                        type: 'subscribe',
+                        bead_id: beadId
+                    }}));
+                }}
+            }},
+            
+            unsubscribe(beadId) {{
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) {{
+                    this.socket.send(JSON.stringify({{
+                        type: 'unsubscribe',
+                        bead_id: beadId
+                    }}));
+                }}
+            }},
+            
+            sendInput(beadId, data) {{
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) {{
+                    this.socket.send(JSON.stringify({{
+                        type: 'input',
+                        bead_id: beadId,
+                        data: data
+                    }}));
+                }}
+            }},
+            
+            sendSignal(beadId, signal) {{
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) {{
+                    this.socket.send(JSON.stringify({{
+                        type: 'signal',
+                        bead_id: beadId,
+                        signal: signal
+                    }}));
+                }}
+            }},
+            
+            terminate(beadId) {{
+                if (confirm(`Terminate agent process for ${{beadId}}?`)) {{
+                    if (this.socket && this.socket.readyState === WebSocket.OPEN) {{
+                        this.socket.send(JSON.stringify({{
+                            type: 'terminate',
+                            bead_id: beadId
+                        }}));
+                    }}
+                }}
+            }},
+            
+            resize(beadId, rows, cols) {{
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) {{
+                    this.socket.send(JSON.stringify({{
+                        type: 'resize',
+                        bead_id: beadId,
+                        rows: rows,
+                        cols: cols
+                    }}));
+                }}
+            }},
+            
+            toggleDrawer(beadId) {{
+                const drawer = document.getElementById(`terminal-drawer-${{beadId}}`);
+                if (!drawer) return;
+                
+                const isOpen = drawer.classList.toggle('open');
+                
+                if (isOpen) {{
+                    this.initTerminal(beadId);
+                    this.subscribe(beadId);
+                }}
+            }},
+            
+            initTerminal(beadId) {{
+                const containerId = `terminal-${{beadId}}`;
+                const container = document.getElementById(containerId);
+                if (!container || this.terminals[beadId]) return;
+                
+                const term = new Terminal({{
+                    theme: {{
+                        background: '#000000',
+                        foreground: '#f1f5f9',
+                        cursor: '#f1f5f9',
+                        cursorAccent: '#000000',
+                    }},
+                    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                    fontSize: 12,
+                    cursorBlink: true,
+                    scrollback: 5000,
+                }});
+                
+                const fitAddon = new FitAddon.FitAddon();
+                const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+                
+                term.loadAddon(fitAddon);
+                term.loadAddon(webLinksAddon);
+                term.open(container);
+                fitAddon.fit();
+                
+                // Handle user input
+                term.onData(data => {{
+                    this.sendInput(beadId, data);
+                }});
+                
+                // Handle resize
+                const resizeObserver = new ResizeObserver(() => {{
+                    fitAddon.fit();
+                    this.resize(beadId, term.rows, term.cols);
+                }});
+                resizeObserver.observe(container);
+                
+                this.terminals[beadId] = term;
+                this.fitAddons[beadId] = fitAddon;
+            }},
+            
+            openModal(beadId) {{
+                const modal = document.getElementById('terminal-modal');
+                const container = document.getElementById('modal-terminal-container');
+                const beadIdSpan = document.getElementById('modal-bead-id');
+                
+                this.modalBeadId = beadId;
+                beadIdSpan.textContent = beadId;
+                modal.classList.add('open');
+                
+                // Create modal terminal
+                if (this.modalTerminal) {{
+                    this.modalTerminal.dispose();
+                }}
+                
+                container.innerHTML = '';
+                
+                this.modalTerminal = new Terminal({{
+                    theme: {{
+                        background: '#000000',
+                        foreground: '#f1f5f9',
+                        cursor: '#f1f5f9',
+                    }},
+                    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                    fontSize: 14,
+                    cursorBlink: true,
+                    scrollback: 10000,
+                }});
+                
+                this.modalFitAddon = new FitAddon.FitAddon();
+                this.modalTerminal.loadAddon(this.modalFitAddon);
+                this.modalTerminal.loadAddon(new WebLinksAddon.WebLinksAddon());
+                this.modalTerminal.open(container);
+                
+                setTimeout(() => {{
+                    this.modalFitAddon.fit();
+                    this.resize(beadId, this.modalTerminal.rows, this.modalTerminal.cols);
+                }}, 100);
+                
+                // Handle input
+                this.modalTerminal.onData(data => {{
+                    this.sendInput(beadId, data);
+                }});
+                
+                // Copy buffer from inline terminal if exists
+                if (this.terminals[beadId]) {{
+                    // Request full buffer
+                    if (this.socket && this.socket.readyState === WebSocket.OPEN) {{
+                        this.socket.send(JSON.stringify({{
+                            type: 'history',
+                            bead_id: beadId
+                        }}));
+                    }}
+                }}
+                
+                // Handle resize
+                window.addEventListener('resize', this.handleModalResize);
+            }},
+            
+            handleModalResize: function() {{
+                if (TerminalController.modalFitAddon) {{
+                    TerminalController.modalFitAddon.fit();
+                    if (TerminalController.modalTerminal && TerminalController.modalBeadId) {{
+                        TerminalController.resize(
+                            TerminalController.modalBeadId,
+                            TerminalController.modalTerminal.rows,
+                            TerminalController.modalTerminal.cols
+                        );
+                    }}
+                }}
+            }},
+            
+            closeModal() {{
+                const modal = document.getElementById('terminal-modal');
+                modal.classList.remove('open');
+                window.removeEventListener('resize', this.handleModalResize);
+                this.modalBeadId = null;
+            }},
+            
+            setupModalHandlers() {{
+                // Close on Escape
+                document.addEventListener('keydown', (e) => {{
+                    if (e.key === 'Escape' && this.modalBeadId) {{
+                        this.closeModal();
+                    }}
+                }});
+            }},
+            
+            updateStatus(beadId, connected) {{
+                const status = document.querySelector(`#terminal-status-${{beadId}}`);
+                if (status) {{
+                    status.className = `terminal-status ${{connected ? 'connected' : 'disconnected'}}`;
+                    status.innerHTML = connected 
+                        ? '<span class="pulse"></span> Connected'
+                        : '○ Disconnected';
+                }}
+            }},
+            
+            updateAllStatus() {{
+                document.querySelectorAll('[data-terminal-bead]').forEach(el => {{
+                    const beadId = el.dataset.terminalBead;
+                    this.updateStatus(beadId, this.connected);
+                }});
+            }}
+        }};
+        
         // Update toggle UI after DOM is ready
         document.addEventListener('DOMContentLoaded', () => {{
             ThemeController.updateToggleUI();
+            // Initialize terminal controller if any terminals are present
+            if (document.querySelector('[data-terminal-bead]')) {{
+                TerminalController.init();
+            }}
         }});
         
         // Listen for system preference changes
@@ -623,8 +1112,8 @@ GITHUB_ICON = '''<svg class="github-icon" viewBox="0 0 16 16" width="14" height=
 </svg>'''
 
 
-def render_card(issue: Dict[str, Any]) -> str:
-    """Render a single issue card with priority, type, time, labels, and GitHub link."""
+def render_card(issue: Dict[str, Any], terminals: Optional[Dict[str, Any]] = None) -> str:
+    """Render a single issue card with priority, type, time, labels, GitHub link, and terminal."""
     issue_id = issue.get('id', 'unknown')
     title = issue.get('title', 'Untitled')
     priority = issue.get('priority', 4)
@@ -632,6 +1121,9 @@ def render_card(issue: Dict[str, Any]) -> str:
     labels = issue.get('labels', [])
     created_at = issue.get('created_at', '')
     github_url = issue.get('github_url', '')
+    status = issue.get('status', 'open')
+    
+    terminals = terminals or {}
     
     # Priority class
     p_class = f'p{min(priority, 4)}'
@@ -661,6 +1153,39 @@ def render_card(issue: Dict[str, Any]) -> str:
         github_html = f'''<a href="{github_url}" target="_blank" class="github-link" 
            title="View on GitHub">{GITHUB_ICON}</a>'''
     
+    # Terminal drawer for in_progress cards with active terminal
+    terminal_html = ''
+    has_terminal = issue_id in terminals
+    
+    if status == 'in_progress':
+        if has_terminal:
+            terminal_info = terminals[issue_id]
+            terminal_html = f'''
+        <div class="terminal-section" data-terminal-bead="{issue_id}">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                <span class="terminal-indicator" onclick="TerminalController.toggleDrawer('{issue_id}')" title="Toggle terminal">
+                    <span class="pulse"></span>
+                    Terminal
+                </span>
+                <button class="terminal-btn" onclick="TerminalController.openModal('{issue_id}')" title="Full screen">⛶</button>
+            </div>
+            <div id="terminal-drawer-{issue_id}" class="terminal-drawer">
+                <div class="terminal-container" id="terminal-{issue_id}"></div>
+                <div class="terminal-controls">
+                    <button class="terminal-btn" onclick="TerminalController.sendSignal('{issue_id}', 'SIGINT')">Send Ctrl+C</button>
+                    <button class="terminal-btn danger" onclick="TerminalController.terminate('{issue_id}')">Terminate</button>
+                    <button class="terminal-btn" onclick="TerminalController.openModal('{issue_id}')">Full Screen</button>
+                    <span id="terminal-status-{issue_id}" class="terminal-status disconnected">○ Connecting...</span>
+                </div>
+            </div>
+        </div>'''
+        else:
+            # Show placeholder for cards without active terminal
+            terminal_html = '''
+        <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-muted);">
+            No active terminal session
+        </div>'''
+    
     return f'''
     <div class="card {p_class}">
         <div class="card-header">
@@ -676,12 +1201,15 @@ def render_card(issue: Dict[str, Any]) -> str:
             <span>{age}</span>
         </div>
         {labels_html}
+        {terminal_html}
     </div>
     '''
 
 
-def render_column(status: str, issues: List[Dict[str, Any]]) -> str:
+def render_column(status: str, issues: List[Dict[str, Any]], terminals: Optional[Dict[str, Any]] = None) -> str:
     """Render a kanban column as HTML."""
+    terminals = terminals or {}
+    
     icons = {
         'open': '📋',
         'in_progress': '🔄',
@@ -700,7 +1228,7 @@ def render_column(status: str, issues: List[Dict[str, Any]]) -> str:
     count = len(issues)
     
     if issues:
-        cards_html = ''.join(render_card(issue) for issue in issues)
+        cards_html = ''.join(render_card(issue, terminals) for issue in issues)
     else:
         cards_html = '<div class="empty">No issues</div>'
     
@@ -718,15 +1246,18 @@ def render_column(status: str, issues: List[Dict[str, Any]]) -> str:
 
 
 def render_board(issues: List[Dict[str, Any]], label_filter: Optional[str] = None,
-                 refresh: int = DEFAULT_REFRESH) -> str:
+                 refresh: int = DEFAULT_REFRESH, ws_port: int = TERMINAL_WS_PORT) -> str:
     """Render the full board as HTML."""
     columns = group_by_status(issues)
     all_labels = get_all_labels(issues)
     
+    # Get active terminal sessions
+    terminals = get_active_terminals()
+    
     # Build columns HTML
     columns_html = ''
     for status in ['open', 'in_progress', 'blocked', 'closed']:
-        columns_html += render_column(status, columns[status])
+        columns_html += render_column(status, columns[status], terminals)
     
     # Filter dropdown
     filter_options = '<option value="">All issues</option>'
@@ -745,7 +1276,8 @@ def render_board(issues: List[Dict[str, Any]], label_filter: Optional[str] = Non
         filter_html=filter_html,
         refresh=refresh,
         timestamp=timestamp,
-        issue_count=issue_count
+        issue_count=issue_count,
+        ws_port=ws_port
     )
 
 
@@ -755,6 +1287,7 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
     label_filter: Optional[str] = None
     refresh: int = DEFAULT_REFRESH
     show_github: bool = False
+    ws_port: int = TERMINAL_WS_PORT
     
     def log_message(self, format, *args):
         """Suppress default logging."""
@@ -778,7 +1311,7 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
                 github_links = load_github_links()
                 issues = merge_github_links(issues, github_links)
             
-            html = render_board(issues, label_filter, self.refresh)
+            html = render_board(issues, label_filter, self.refresh, self.ws_port)
             
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
@@ -798,6 +1331,14 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(issues).encode('utf-8'))
+        
+        elif parsed.path == '/api/terminals':
+            # Return active terminal sessions
+            terminals = get_active_terminals()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(terminals).encode('utf-8'))
             
         elif parsed.path == '/health':
             self.send_response(200)
@@ -850,12 +1391,15 @@ def main():
                         help="Don't auto-open browser")
     parser.add_argument('--github', action='store_true',
                         help='Show GitHub links on cards (loads from .speckle/github-links.jsonl)')
+    parser.add_argument('--ws-port', type=int, default=TERMINAL_WS_PORT,
+                        help=f'WebSocket port for terminal server (default: {TERMINAL_WS_PORT})')
     args = parser.parse_args()
     
     # Configure handler
     BoardHandler.label_filter = args.filter
     BoardHandler.refresh = args.refresh
     BoardHandler.show_github = args.github
+    BoardHandler.ws_port = args.ws_port
     
     # Start server
     server = http.server.HTTPServer(('localhost', args.port), BoardHandler)
@@ -866,14 +1410,25 @@ def main():
     
     github_status = '✓ enabled' if args.github else '(disabled)'
     
+    # Check if terminal server is available
+    terminals = get_active_terminals()
+    terminal_count = len(terminals)
+    
     print(f'''
 🔮 Speckle Board
 ════════════════════════════════════════
-   URL:     {url}
-   Refresh: {args.refresh}s
-   Filter:  {args.filter or '(none)'}
-   GitHub:  {github_status}
+   URL:       {url}
+   Refresh:   {args.refresh}s
+   Filter:    {args.filter or '(none)'}
+   GitHub:    {github_status}
+   
+   Terminal Mirroring:
+   WebSocket: ws://localhost:{args.ws_port}
+   Active:    {terminal_count} session(s)
 ════════════════════════════════════════
+   💡 Start terminal server:
+   python .speckle/scripts/terminal_server.py server
+
    Press Ctrl+C to stop
 ''')
     
