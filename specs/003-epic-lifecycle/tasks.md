@@ -10,11 +10,11 @@
 
 **Purpose**: Create epic management helper functions
 
-- [ ] T001 Create `.speckle/scripts/epics.sh` skeleton
-- [ ] T002 [P] Add `create_epic()` function
-- [ ] T003 [P] Add `get_epic_id()` function
-- [ ] T004 Add `update_epic_status()` function
-- [ ] T005 Add `get_epic_progress()` function
+- [x] T001 Create `.speckle/scripts/epics.sh` skeleton
+- [x] T002 [P] Add `create_epic()` function
+- [x] T003 [P] Add `get_epic_id()` function
+- [x] T004 Add `update_epic_status()` function
+- [x] T005 Add `get_epic_progress()` function
 
 ---
 
@@ -24,10 +24,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Update speckle.sync.md to source epics.sh
-- [ ] T007 [US1] Add epic creation logic to sync
-- [ ] T008 [US1] Store epicId in mapping file
-- [ ] T009 [US1] Link tasks to epic via bd dep add
+- [x] T006 [US1] Update speckle.sync.md to source epics.sh
+- [x] T007 [US1] Add epic creation logic to sync
+- [x] T008 [US1] Store epicId in mapping file
+- [x] T009 [US1] Link tasks to epic via bd dep add
 
 **Checkpoint**: Syncing creates epic with linked tasks
 
@@ -39,9 +39,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Implement state transition logic in update_epic_status()
-- [ ] T011 [US2] Call status update after task sync
-- [ ] T012 [US2] Handle edge cases (manual changes, inconsistencies)
+- [x] T010 [US2] Implement state transition logic in update_epic_status()
+- [x] T011 [US2] Call status update after task sync
+- [x] T012 [US2] Handle edge cases (manual changes, inconsistencies)
 
 ---
 
@@ -51,16 +51,16 @@
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Update speckle.status.md to show epic summary
-- [ ] T014 [US3] Add epic progress bar visualization
-- [ ] T015 [US3] Add --epics option for multi-epic view
+- [x] T013 [US3] Update speckle.status.md to show epic summary
+- [x] T014 [US3] Add epic progress bar visualization
+- [x] T015 [US3] Add --epics option for multi-epic view
 
 ---
 
 ## Phase 5: Polish
 
-- [ ] T016 [P] Update SELF-HOSTING.md with v0.4.0 entry
-- [ ] T017 Self-validate: Check own feature has epic
+- [x] T016 [P] Update SELF-HOSTING.md with v0.4.0 entry
+- [x] T017 Self-validate: Check own feature has epic
 
 ---
 
