@@ -48,6 +48,26 @@ git clone https://github.com/JulianDouma/Speckle.git /tmp/speckle
 # Restart your AI agent to load commands
 ```
 
+### Speckle CLI
+
+Speckle includes a unified CLI for common operations:
+
+```bash
+# Add to PATH (choose one):
+export PATH="$PATH:/path/to/Speckle/bin"   # Add to shell config
+# OR
+ln -s /path/to/Speckle/bin/speckle /usr/local/bin/speckle  # Symlink
+
+# Now use anywhere in your project:
+speckle board                # Start kanban board
+speckle doctor               # Run diagnostics
+speckle doctor --fix         # Auto-fix issues
+speckle status               # Show work status
+speckle ready                # Show available work
+speckle sync                 # Sync with git
+speckle --help               # Show all commands
+```
+
 #### Installer Options
 
 ```bash
@@ -222,6 +242,10 @@ Workflow:
 Visualize your beads issues in a web-based kanban board:
 
 ```bash
+# Using CLI (recommended)
+speckle board
+
+# Using Claude command
 /speckle.board
 ```
 
@@ -237,6 +261,11 @@ This opens a browser with a 4-column kanban view:
 **Options:**
 
 ```bash
+# CLI usage
+speckle board --port 3000         # Custom port
+speckle board --no-browser        # Don't auto-open browser
+
+# Claude command usage
 /speckle.board --port 3000        # Custom port
 /speckle.board --filter "v1.2.0"  # Filter by label
 /speckle.board --no-browser       # Don't auto-open browser
@@ -255,6 +284,10 @@ This opens a browser with a 4-column kanban view:
 Use the doctor command to diagnose issues:
 
 ```bash
+# Using CLI (recommended)
+speckle doctor
+
+# Using Claude command
 /speckle.doctor
 ```
 
@@ -288,6 +321,10 @@ Use the doctor command to diagnose issues:
 Use `--fix` to attempt automatic repairs:
 
 ```bash
+# Using CLI
+speckle doctor --fix
+
+# Using Claude command
 /speckle.doctor --fix
 ```
 

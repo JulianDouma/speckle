@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+#
+# Speckle CLI wrapper
+#
+# This script provides a convenient way to invoke Speckle commands.
+# It automatically finds the .speckle directory and runs the CLI.
+#
+# Installation:
+#   Option 1: Add this directory to PATH
+#     export PATH="$PATH:/path/to/Speckle/bin"
+#
+#   Option 2: Create symlink in /usr/local/bin
+#     ln -s /path/to/Speckle/bin/speckle /usr/local/bin/speckle
+#
+#   Option 3: Use directly
+#     ./bin/speckle <command>
+#
+
+set -euo pipefail
+
+# Find the .speckle directory by searching up from current directory
+find_speckle_root() {
+    local dir="$PWD"
+    while [ "$dir" != "/" ]; do
+        if [ -d "$dir/.speckle" ]; then
+            echo "$dir"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    
+    # Fallback: use the directory containing this script
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    echo "$(dirname "$script_dir")"
+}
+
+# Main
+main() {
+    local root
+    root="$(find_speckle_root)"
+    
+    local cli_path="$root/.speckle/cli.py"
+    
+    if [ ! -f "$cli_path" ]; then
+        echo "Error: Speckle CLI not found at $cli_path" >&2
+        echo "Make sure you're in a Speckle-enabled project." >&2
+        exit 1
+    fi
+    
+    # Run the CLI with all arguments
+    exec python3 "$cli_path" "$@"
+}
+
+main "$@"
