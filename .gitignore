@@ -17,3 +17,4 @@ Thumbs.db
 .speckle/sessions/
 .speckle/scripts/__pycache__/
 .speckle/terminals/
+.speckle/github-links.jsonl
