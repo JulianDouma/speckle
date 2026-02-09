@@ -2,47 +2,65 @@
 
 ## ⚠️ CRITICAL: Self-Hosted Development
 
-**This is the Speckle project itself. Tasks MUST be Speckle tasks.**
+**This is the Speckle project itself. All work MUST be tracked as Speckle beads.**
 
-We develop **Speckle using Speckle** - this is our core dogfooding principle:
+We develop **Speckle using Speckle** - dogfooding is mandatory.
+
+### Essential Commands
+
+```bash
+# Find work
+bd ready                          # Shows prioritized ready tasks
+
+# Do work  
+bd update <id> --status in_progress   # Claim task
+# ... implement ...
+bd close <id>                     # Complete task
+
+# Create issues
+bd create "Title" --type bug      # Bug report
+bd create "Title" --type task     # Task
+bd create "Title" --type feature  # Feature request
+
+# Sync
+bd sync                           # Sync with git (before push)
+```
+
+### Rules
 
 | Rule | Description |
 |------|-------------|
-| **Issue prefix** | All issues use `speckle-` prefix (configured) |
-| **Workflow** | Use `/speckle.*` commands for all work |
-| **Tracking** | Track progress via beads (`bd ready`, `bd close`) |
-| **Memory** | Implementation context persists in bead comments |
+| **All issues use `speckle-` prefix** | Configured in `.beads/config.toml` |
+| **Track via beads** | Use `bd ready`, `bd close` - not external trackers |
+| **Comments preserve memory** | Use `bd comments <id> add "note"` for context |
+
+### Spec-Kit Integration (Optional)
+
+For larger features with formal planning:
 
 ```bash
-# CORRECT: Use Speckle workflows
-/speckle.sync              # Sync tasks to beads
-/speckle.implement         # Implement with tracking
-/speckle.bugfix "issue"    # Start bugfix workflow
+# 1. Create spec, plan, tasks (spec-kit)
+specify spec "Feature Name"
+specify plan
+specify tasks
 
-# CORRECT: Use bd for issue tracking
-bd ready                   # Find next task
-bd close speckle-abc       # Complete task
+# 2. Sync to beads (Speckle bridge)
+# Manually: review tasks.md, create beads issues
+# Or if /speckle.sync works: /speckle.sync
 
-# WRONG: Do NOT use external issue trackers
-# WRONG: Do NOT skip beads tracking
-# WRONG: Do NOT work without speckle- prefixed issues
+# 3. Execute via beads
+bd ready && bd close <id>
 ```
 
-This ensures every improvement to Speckle validates the tool itself.
-See [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md) for the complete dogfooding philosophy.
+See [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md) for dogfooding philosophy.
 
 ---
-
-## Issue Tracking
-
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
 ## Quick Reference
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
+bd ready              # Find available work (prioritized)
+bd show <id>          # View issue details  
 bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
@@ -53,15 +71,12 @@ Work is complete only after `git push` succeeds.
 
 ### Checklist
 
-1. **File issues** for remaining work
-2. **Run quality gates** (if code changed): tests, linters, builds
-3. **Update issues**: close finished, update in-progress
-4. **Push to remote**:
+1. **Close completed issues**: `bd close <id>`
+2. **File issues for remaining work**: `bd create "Title"`
+3. **Sync and push**:
    ```bash
-   git pull --rebase && bd sync && git push
-   git status  # Should show "up to date with origin"
+   bd sync && git pull --rebase && git push
    ```
-5. **Clean up**: `git stash clear`, `git remote prune origin`
-6. **Hand off**: summarize progress and next steps
+4. **Hand off**: summarize progress and next steps
 
 If push fails, resolve conflicts and retry until successful.
