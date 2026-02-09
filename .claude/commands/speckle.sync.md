@@ -19,6 +19,9 @@ Process arguments if provided (e.g., `--dry-run`, `--force`).
 Verify environment before proceeding:
 
 ```bash
+# Source label helpers
+source ".speckle/scripts/labels.sh"
+
 # Check beads is available
 if ! command -v bd &> /dev/null; then
     echo "❌ Beads not installed. Install from: https://github.com/steveyegge/beads"
@@ -176,16 +179,16 @@ ${planContext || 'See plan.md for implementation details'}
                    : task.story === 'US1' ? 2 
                    : 3
 
-    // Build labels
-    const labels = ['speckle', `phase:${slugify(task.phase)}`]
-    if (task.story) labels.push(`story:${task.story.toLowerCase()}`)
-    if (task.parallel) labels.push('parallel')
+    // Build labels using labels.sh helper
+    // Constructs: feature:<branch>, phase:<name>, story:<id>, parallel
+    const taskText = `${task.id} ${task.parallel ? '[P]' : ''} ${task.story ? `[${task.story}]` : ''} ${task.description}`
+    const labels = exec(`build_label_string "${taskText}" "${task.phase}" "${BRANCH}"`)
 
-    // Create issue
+    // Create issue with rich labels
     const result = exec(`bd create "${task.id}: ${truncate(task.description, 60)}" \
         --type task \
         --priority ${priority} \
-        --labels "${labels.join(',')}" \
+        --labels "${labels.trim()}" \
         --description "${escape(description)}" \
         --silent`)
     
