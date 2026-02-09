@@ -94,16 +94,12 @@ done
 
 # Copy formulas
 echo "📜 Installing formulas..."
-for formula in speckle-feature.toml speckle-bugfix.toml; do
-    if [ -f "$SCRIPT_DIR/.speckle/formulas/$formula" ]; then
-        # Copy to .beads/formulas if beads is initialized
-        if [ -d "$TARGET_DIR/.beads/formulas" ]; then
-            cp "$SCRIPT_DIR/.speckle/formulas/$formula" "$TARGET_DIR/.beads/formulas/"
-            echo "   ✅ $formula → .beads/formulas/"
-        else
-            cp "$SCRIPT_DIR/.speckle/formulas/$formula" "$TARGET_DIR/.speckle/formulas/"
-            echo "   ✅ $formula → .speckle/formulas/"
-        fi
+mkdir -p "$TARGET_DIR/.beads/formulas"
+for formula in "$SCRIPT_DIR"/.speckle/formulas/*.toml; do
+    if [ -f "$formula" ]; then
+        formula_name="$(basename "$formula")"
+        cp "$formula" "$TARGET_DIR/.beads/formulas/"
+        echo "   ✅ $formula_name"
     fi
 done
 

@@ -76,6 +76,58 @@ git clone https://github.com/JulianDouma/Speckle.git /tmp/speckle
 | `/speckle.status` | Show epic progress and health |
 | `/speckle.progress` | Add manual progress note to current task |
 
+## Formulas
+
+Speckle includes beads formulas for quickly starting new features or bugfixes:
+
+### Create a Feature
+
+```bash
+bd formula speckle-feature "User Authentication"
+```
+
+This creates:
+- A feature branch (e.g., `001-user-authentication`)
+- Spec directory structure (`specs/001-user-authentication/`)
+- Epic issue for tracking
+
+**Example output:**
+```
+✅ Feature created: User Authentication
+
+📁 Branch: 001-user-authentication
+📂 Specs: specs/001-user-authentication/
+🎫 Epic: speckle-abc
+
+Next steps:
+  /speckit.specify "Add user authentication"
+```
+
+### Create a Bugfix
+
+```bash
+bd formula speckle-bugfix "Login fails on mobile"
+```
+
+This creates:
+- A bugfix branch (e.g., `fix-login-fails-on-mobile`)
+- Bug issue with severity tracking
+
+**Example output:**
+```
+✅ Bugfix created: Login fails on mobile
+
+📁 Branch: fix-login-fails-on-mobile
+🐛 Issue: speckle-xyz
+⚠️  Severity: medium
+
+Next steps:
+  1. Reproduce the bug
+  2. Write a failing test
+  3. Fix and verify
+  4. bd close speckle-xyz
+```
+
 ## How It Works
 
 ```
