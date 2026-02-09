@@ -75,9 +75,19 @@ check_speckit() {
     return 0
 }
 
-# Slugify a string (for labels, filenames)
+# Slugify a string for use as labels, filenames, branch names
+# - Converts to lowercase
+# - Replaces spaces and special chars with hyphens
+# - Removes consecutive hyphens
+# - Removes leading/trailing hyphens
 slugify() {
-    echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'
+    local input="${1:-}"
+    echo "$input" | \
+        tr '[:upper:]' '[:lower:]' | \
+        sed 's/[^a-z0-9]/-/g' | \
+        sed 's/--*/-/g' | \
+        sed 's/^-//' | \
+        sed 's/-$//'
 }
 
 # Truncate string with ellipsis

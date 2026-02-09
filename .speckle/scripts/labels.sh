@@ -8,24 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Slugify a string for use as a label value
-# - Converts to lowercase
-# - Replaces spaces and special chars with hyphens
-# - Removes consecutive hyphens
-# - Removes leading/trailing hyphens
-#
-# Arguments:
-#   $1 - String to slugify
-# Returns: Slugified string
-slugify() {
-    local input="${1:-}"
-    echo "$input" | \
-        tr '[:upper:]' '[:lower:]' | \
-        sed 's/[^a-z0-9]/-/g' | \
-        sed 's/--*/-/g' | \
-        sed 's/^-//' | \
-        sed 's/-$//'
-}
+# Note: slugify() is defined in common.sh (sourced above)
 
 # Extract phase label from a phase/section name
 # Arguments:
