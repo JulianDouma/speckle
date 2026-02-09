@@ -1,0 +1,67 @@
+# Speckle Bugfix Formula
+# Usage: bd formula speckle-bugfix "Bug description"
+#
+# Creates a lightweight bugfix workflow:
+# - Bugfix branch (fix-NNN-description)
+# - Bug issue for tracking
+
+[formula]
+name = "speckle-bugfix"
+description = "Create a bugfix with minimal overhead"
+version = "1.0.0"
+
+[prompts]
+bug_title = { prompt = "Bug title", required = true }
+description = { prompt = "Description of the bug", required = true }
+severity = { prompt = "Severity (critical/high/medium/low)", default = "medium" }
+related_epic = { prompt = "Related epic ID (optional)", required = false }
+
+[issue]
+title = "Bug: {{bug_title}}"
+type = "bug"
+priority = "{% if severity == 'critical' %}1{% elif severity == 'high' %}2{% elif severity == 'medium' %}3{% else %}4{% endif %}"
+labels = ["speckle", "bug", "severity:{{severity}}"]
+
+description = """
+## Bug: {{bug_title}}
+
+### Description
+{{description}}
+
+### Severity
+{{severity}}
+
+{% if related_epic %}
+### Related Epic
+{{related_epic}}
+{% endif %}
+
+### Fix Checklist
+- [ ] Reproduce the bug
+- [ ] Write failing test
+- [ ] Implement fix
+- [ ] Verify fix
+- [ ] Update tests
+
+---
+*Created by Speckle formula*
+"""
+
+[actions]
+# Create bugfix branch
+branch = "fix-{{bug_title | slugify}}"
+
+[output]
+success = """
+✅ Bugfix created: {{bug_title}}
+
+📁 Branch: {{branch}}
+🐛 Issue: {{issue_id}}
+⚠️  Severity: {{severity}}
+
+Next steps:
+  1. Reproduce the bug
+  2. Write a failing test
+  3. Fix and verify
+  4. bd close {{issue_id}}
+"""
