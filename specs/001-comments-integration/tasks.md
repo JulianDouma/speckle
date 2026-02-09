@@ -14,7 +14,7 @@
 
 **Purpose**: Create shared comment formatting utilities
 
-- [ ] T001 Create `.speckle/scripts/comments.sh` with comment helper functions
+- [x] T001 Create `.speckle/scripts/comments.sh` with comment helper functions
 
 ---
 
@@ -26,10 +26,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Add `format_completion_comment()` to comments.sh - formats files changed, lines, timestamp
-- [ ] T003 [US1] Add `add_comment_safe()` to comments.sh - wrapper with graceful failure handling
-- [ ] T004 [US1] Update `speckle.implement.md` to gather git diff stats after implementation
-- [ ] T005 [US1] Update `speckle.implement.md` to record completion comment via `bd comments add`
+- [x] T002 [US1] Add `format_completion_comment()` to comments.sh - formats files changed, lines, timestamp
+- [x] T003 [US1] Add `add_comment_safe()` to comments.sh - wrapper with graceful failure handling
+- [x] T004 [US1] Update `speckle.implement.md` to gather git diff stats after implementation
+- [x] T005 [US1] Update `speckle.implement.md` to record completion comment via `bd comments add`
 
 **Checkpoint**: Implementations automatically record progress comments
 
@@ -43,9 +43,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Create `speckle.status.md` command skeleton
-- [ ] T007 [US2] Implement feature progress display (tasks completed vs total)
-- [ ] T008 [US2] Add recent comment display for in-progress tasks
+- [x] T006 [US2] Create `speckle.status.md` command skeleton
+- [x] T007 [US2] Implement feature progress display (tasks completed vs total)
+- [x] T008 [US2] Add recent comment display for in-progress tasks
 
 **Checkpoint**: Can view feature progress and implementation history
 
@@ -59,10 +59,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Create `speckle.progress.md` command
-- [ ] T010 [US3] Add `format_progress_note()` to comments.sh
-- [ ] T011 [US3] Implement current task detection from mapping file
-- [ ] T012 [US3] Add error handling for no task in progress
+- [x] T009 [US3] Create `speckle.progress.md` command
+- [x] T010 [US3] Add `format_progress_note()` to comments.sh
+- [x] T011 [US3] Implement current task detection from mapping file
+- [x] T012 [US3] Add error handling for no task in progress
 
 **Checkpoint**: Can add manual progress notes during implementation
 
@@ -72,9 +72,9 @@
 
 **Purpose**: Documentation and validation
 
-- [ ] T013 [P] Update README.md with new commands
-- [ ] T014 [P] Update docs/SELF-HOSTING.md with v0.2.0 entry
-- [ ] T015 Self-validate: Use `/speckle.progress` during own development
+- [x] T013 [P] Update README.md with new commands
+- [x] T014 [P] Update docs/SELF-HOSTING.md with v0.2.0 entry
+- [x] T015 Self-validate: Use `/speckle.progress` during own development
 
 ---
 
