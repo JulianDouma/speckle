@@ -1,0 +1,69 @@
+# Speckle Feature Formula
+# Usage: bd formula speckle-feature "Feature description"
+#
+# Creates a full Speckle feature workflow:
+# - Feature branch (NNN-feature-name)
+# - Spec directory structure
+# - Epic issue for tracking
+
+[formula]
+name = "speckle-feature"
+description = "Create a new Speckle feature with spec-kit integration"
+version = "1.0.0"
+
+[prompts]
+feature_name = { prompt = "Feature name (2-4 words)", required = true }
+description = { prompt = "Brief description", required = true }
+priority = { prompt = "Priority (1-4)", default = "2" }
+
+[issue]
+title = "Epic: {{feature_name}}"
+type = "feature"
+priority = "{{priority}}"
+labels = ["speckle", "epic", "feature:{{feature_name | slugify}}"]
+
+description = """
+## Feature: {{feature_name}}
+
+{{description}}
+
+### Workflow
+1. `/speckit.specify` - Create specification
+2. `/speckit.plan` - Create implementation plan
+3. `/speckit.tasks` - Generate task list
+4. `/speckle.sync` - Sync tasks to beads
+5. `/speckle.implement` - Implement with tracking
+
+### Links
+- Spec: `specs/{{feature_name | slugify}}/spec.md`
+- Plan: `specs/{{feature_name | slugify}}/plan.md`
+- Tasks: `specs/{{feature_name | slugify}}/tasks.md`
+
+---
+*Created by Speckle formula*
+"""
+
+[actions]
+# Create branch
+branch = "{{feature_name | slugify | prefix_number}}"
+
+# Create spec directory
+mkdir = "specs/{{feature_name | slugify | prefix_number}}"
+
+# Initialize spec files (placeholder)
+touch = [
+    "specs/{{feature_name | slugify | prefix_number}}/spec.md",
+    "specs/{{feature_name | slugify | prefix_number}}/plan.md"
+]
+
+[output]
+success = """
+✅ Feature created: {{feature_name}}
+
+📁 Branch: {{branch}}
+📂 Specs: specs/{{feature_name | slugify | prefix_number}}/
+🎫 Epic: {{issue_id}}
+
+Next steps:
+  /speckit.specify "{{description}}"
+"""
