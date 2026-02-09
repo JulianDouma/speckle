@@ -1745,6 +1745,49 @@ def merge_github_links(issues: List[Dict[str, Any]], links: Dict[str, str]) -> L
     return issues
 
 
+def start_terminal_server(ws_port: int) -> Optional[subprocess.Popen]:
+    """Start terminal server as background process."""
+    import socket
+    
+    # Check if port is already in use
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(('localhost', ws_port))
+        sock.close()
+    except OSError:
+        # Port in use - server might already be running
+        return None
+    
+    # Find terminal_server.py
+    terminal_server = SCRIPTS_DIR / "terminal_server.py"
+    if not terminal_server.exists():
+        return None
+    
+    # Check if websockets is available
+    try:
+        import websockets
+    except ImportError:
+        return None
+    
+    # Start server in background
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, str(terminal_server), "server", "--port", str(ws_port)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        # Give it a moment to start
+        import time
+        time.sleep(0.3)
+        if proc.poll() is None:
+            return proc
+    except Exception:
+        pass
+    
+    return None
+
+
 def main():
     """Entry point - start the HTTP server."""
     parser = argparse.ArgumentParser(description='Speckle Kanban Board Server')
@@ -1760,6 +1803,8 @@ def main():
                         help='Show GitHub links on cards (loads from .speckle/github-links.jsonl)')
     parser.add_argument('--ws-port', type=int, default=TERMINAL_WS_PORT,
                         help=f'WebSocket port for terminal server (default: {TERMINAL_WS_PORT})')
+    parser.add_argument('--no-terminal-server', action='store_true',
+                        help="Don't auto-start terminal server")
     args = parser.parse_args()
     
     # Configure handler
@@ -1767,6 +1812,24 @@ def main():
     BoardHandler.refresh = args.refresh
     BoardHandler.show_github = args.github
     BoardHandler.ws_port = args.ws_port
+    
+    # Auto-start terminal server
+    terminal_proc = None
+    terminal_status = "disabled"
+    if not args.no_terminal_server:
+        terminal_proc = start_terminal_server(args.ws_port)
+        if terminal_proc:
+            terminal_status = "✓ auto-started"
+        else:
+            # Check if already running by trying to connect
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                sock.connect(('localhost', args.ws_port))
+                sock.close()
+                terminal_status = "✓ already running"
+            except (ConnectionRefusedError, OSError):
+                terminal_status = "✗ unavailable (install websockets)"
     
     # Start server
     server = http.server.HTTPServer(('localhost', args.port), BoardHandler)
@@ -1777,7 +1840,7 @@ def main():
     
     github_status = '✓ enabled' if args.github else '(disabled)'
     
-    # Check if terminal server is available
+    # Check active terminals
     terminals = get_active_terminals()
     terminal_count = len(terminals)
     
@@ -1791,11 +1854,9 @@ def main():
    
    Terminal Mirroring:
    WebSocket: ws://localhost:{args.ws_port}
+   Server:    {terminal_status}
    Active:    {terminal_count} session(s)
 ════════════════════════════════════════
-   💡 Start terminal server:
-   python .speckle/scripts/terminal_server.py server
-
    Press Ctrl+C to stop
 ''')
     
@@ -1811,6 +1872,13 @@ def main():
     except KeyboardInterrupt:
         print('\n👋 Board stopped')
         server.shutdown()
+        # Stop terminal server if we started it
+        if terminal_proc and terminal_proc.poll() is None:
+            terminal_proc.terminate()
+            try:
+                terminal_proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                terminal_proc.kill()
 
 
 if __name__ == '__main__':
