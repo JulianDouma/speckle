@@ -344,12 +344,12 @@ def group_by_status_hierarchical(hierarchy: Dict[str, Any], max_closed: int = MA
     """
     Group hierarchical issues by status, preserving epic structure.
     
-    Epics are placed in columns based on their children's status (effective status),
-    not their own status. This ensures epics with in-progress work appear in the
-    In Progress column.
+    Epics appear in EACH column where they have children. Each column shows
+    the epic with only the children that belong in that column. The epic's
+    overall progress is shown in each instance.
     
     Returns columns where each contains either:
-    - Epics with their children
+    - Epics (with filtered children for that column)
     - Orphan tasks
     """
     columns = {
@@ -359,13 +359,37 @@ def group_by_status_hierarchical(hierarchy: Dict[str, Any], max_closed: int = MA
         'closed': {'epics': [], 'orphans': []}
     }
     
-    # Group epics by their EFFECTIVE status (based on children)
+    # For each epic, create a copy for each column where it has children
     for epic_id, epic in hierarchy['epics'].items():
-        status = get_epic_effective_status(epic)
-        if status == 'deferred':
-            status = 'blocked'
-        if status in columns:
-            columns[status]['epics'].append(epic)
+        children = epic.get('children', [])
+        
+        # Group children by their status
+        children_by_status = {
+            'open': [],
+            'in_progress': [],
+            'blocked': [],
+            'closed': []
+        }
+        
+        for child in children:
+            child_status = child.get('status', 'open')
+            if child_status == 'deferred':
+                child_status = 'blocked'
+            if child_status in children_by_status:
+                children_by_status[child_status].append(child)
+        
+        # Add epic to each column where it has children
+        for status, status_children in children_by_status.items():
+            if status_children:
+                # Create a copy of the epic with only this column's children
+                epic_copy = {
+                    **epic,
+                    'children': status_children,
+                    # Keep overall progress from all children
+                    'progress': epic.get('progress', {}),
+                    'expanded': epic.get('expanded', False)
+                }
+                columns[status]['epics'].append(epic_copy)
     
     # Group orphans by their status
     for orphan in hierarchy['orphans']:
@@ -986,6 +1010,13 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         .epic-card.p0, .epic-card.p1 {{ border-left-color: var(--fluent-red); }}
         .epic-card.p2 {{ border-left-color: var(--fluent-orange); }}
         .epic-card.p3, .epic-card.p4 {{ border-left-color: var(--fluent-green); }}
+        
+        /* Synced hover state across columns */
+        .epic-card.hover {{
+            box-shadow: var(--shadow-8);
+            border-color: var(--fluent-primary);
+            background: var(--fluent-gray-20);
+        }}
         
         .epic-header {{
             display: flex;
@@ -2060,39 +2091,52 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 }}
             }},
             
-            setEpicExpanded(epicId, expanded) {{
+            setEpicExpanded(baseEpicId, expanded) {{
                 const state = this.getExpandedEpics();
-                state[epicId] = expanded;
+                state[baseEpicId] = expanded;
                 localStorage.setItem(this.EXPANDED_KEY, JSON.stringify(state));
             }},
             
-            toggleEpic(epicId) {{
-                const card = document.querySelector(`[data-epic-id="${{epicId}}"]`);
+            toggleEpic(instanceId) {{
+                const card = document.querySelector(`[data-epic-id="${{instanceId}}"]`);
                 if (!card) return;
                 
+                // Get base epic ID for syncing across columns
+                const baseEpicId = card.dataset.epicBase || instanceId;
+                
                 const isExpanded = card.classList.toggle('expanded');
-                this.setEpicExpanded(epicId, isExpanded);
+                this.setEpicExpanded(baseEpicId, isExpanded);
                 
-                // Update chevron
+                // Update this instance
                 const chevron = card.querySelector('.expand-icon');
-                if (chevron) {{
-                    chevron.textContent = isExpanded ? '▼' : '▶';
-                }}
+                if (chevron) chevron.textContent = isExpanded ? '▼' : '▶';
                 
-                // Toggle children visibility
                 const children = card.querySelector('.epic-children');
                 if (children) {{
                     children.classList.toggle('collapsed', !isExpanded);
                     children.classList.toggle('expanded', isExpanded);
                 }}
+                
+                // Sync all instances of this epic across columns
+                document.querySelectorAll(`[data-epic-base="${{baseEpicId}}"]`).forEach(otherCard => {{
+                    if (otherCard === card) return;
+                    otherCard.classList.toggle('expanded', isExpanded);
+                    const otherChevron = otherCard.querySelector('.expand-icon');
+                    if (otherChevron) otherChevron.textContent = isExpanded ? '▼' : '▶';
+                    const otherChildren = otherCard.querySelector('.epic-children');
+                    if (otherChildren) {{
+                        otherChildren.classList.toggle('collapsed', !isExpanded);
+                        otherChildren.classList.toggle('expanded', isExpanded);
+                    }}
+                }});
             }},
             
-            toggleOrphans() {{
-                const section = document.querySelector('.orphans-section');
+            toggleOrphans(sectionId) {{
+                const section = document.querySelector(`[data-orphans-id="${{sectionId}}"]`);
                 if (!section) return;
                 
                 const isExpanded = section.classList.toggle('expanded');
-                localStorage.setItem('speckle-orphans-expanded', isExpanded);
+                localStorage.setItem(`speckle-orphans-${{sectionId}}`, isExpanded);
                 
                 // Update chevron
                 const chevron = section.querySelector('.expand-icon');
@@ -2101,11 +2145,30 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 }}
                 
                 // Toggle children visibility
-                const children = section.querySelector('.orphans-children');
+                const children = document.getElementById(`orphans-children-${{sectionId}}`);
                 if (children) {{
                     children.classList.toggle('collapsed', !isExpanded);
                     children.classList.toggle('expanded', isExpanded);
                 }}
+            }},
+            
+            // Sync hover state across all instances of an epic
+            initHoverSync() {{
+                document.querySelectorAll('[data-epic-base]').forEach(card => {{
+                    const baseId = card.dataset.epicBase;
+                    
+                    card.addEventListener('mouseenter', () => {{
+                        document.querySelectorAll(`[data-epic-base="${{baseId}}"]`).forEach(c => {{
+                            c.classList.add('hover');
+                        }});
+                    }});
+                    
+                    card.addEventListener('mouseleave', () => {{
+                        document.querySelectorAll(`[data-epic-base="${{baseId}}"]`).forEach(c => {{
+                            c.classList.remove('hover');
+                        }});
+                    }});
+                }});
             }},
             
             initViewMode() {{
@@ -2118,11 +2181,11 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 if (flatBtn) flatBtn.classList.toggle('active', mode === 'flat');
                 if (epicBtn) epicBtn.classList.toggle('active', mode === 'epic');
                 
-                // Restore expanded state for epics
+                // Restore expanded state for epics (use baseEpicId for cross-column sync)
                 const expandedEpics = this.getExpandedEpics();
-                document.querySelectorAll('[data-epic-id]').forEach(card => {{
-                    const epicId = card.dataset.epicId;
-                    if (expandedEpics[epicId]) {{
+                document.querySelectorAll('[data-epic-base]').forEach(card => {{
+                    const baseEpicId = card.dataset.epicBase;
+                    if (expandedEpics[baseEpicId]) {{
                         card.classList.add('expanded');
                         const chevron = card.querySelector('.expand-icon');
                         if (chevron) chevron.textContent = '▼';
@@ -2134,19 +2197,24 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                     }}
                 }});
                 
-                // Restore orphans expanded state
-                const orphansExpanded = localStorage.getItem('speckle-orphans-expanded') === 'true';
-                const orphansSection = document.querySelector('.orphans-section');
-                if (orphansSection && orphansExpanded) {{
-                    orphansSection.classList.add('expanded');
-                    const chevron = orphansSection.querySelector('.expand-icon');
-                    if (chevron) chevron.textContent = '▼';
-                    const children = orphansSection.querySelector('.orphans-children');
-                    if (children) {{
-                        children.classList.remove('collapsed');
-                        children.classList.add('expanded');
+                // Restore orphans expanded state for each section
+                document.querySelectorAll('[data-orphans-id]').forEach(section => {{
+                    const sectionId = section.dataset.orphansId;
+                    const isExpanded = localStorage.getItem(`speckle-orphans-${{sectionId}}`) === 'true';
+                    if (isExpanded) {{
+                        section.classList.add('expanded');
+                        const chevron = section.querySelector('.expand-icon');
+                        if (chevron) chevron.textContent = '▼';
+                        const children = document.getElementById(`orphans-children-${{sectionId}}`);
+                        if (children) {{
+                            children.classList.remove('collapsed');
+                            children.classList.add('expanded');
+                        }}
                     }}
-                }}
+                }});
+                
+                // Initialize hover sync for epics spanning columns
+                this.initHoverSync();
             }}
         }};
         
@@ -2159,8 +2227,8 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             EpicController.toggleEpic(epicId);
         }}
         
-        function toggleOrphans() {{
-            EpicController.toggleOrphans();
+        function toggleOrphans(sectionId) {{
+            EpicController.toggleOrphans(sectionId);
         }}
         
         // Initialize Epic View on page load
@@ -2381,14 +2449,25 @@ def render_progress_bar(percent: int, size: str = 'normal') -> str:
     </div>'''
 
 
-def render_epic_card(epic: Dict[str, Any], terminals: Dict[str, Any], sessions: Dict[str, Any]) -> str:
-    """Render an epic card with collapsible children."""
+def render_epic_card(epic: Dict[str, Any], terminals: Dict[str, Any], sessions: Dict[str, Any], 
+                     column_status: str = '') -> str:
+    """Render an epic card with collapsible children.
+    
+    Args:
+        epic: Epic issue data with children
+        terminals: Terminal data for cards
+        sessions: Session data for cards
+        column_status: Column this epic appears in (for unique IDs when epic spans columns)
+    """
     epic_id = epic.get('id', 'unknown')
     title = epic.get('title', 'Untitled').replace('Epic: ', '')
     progress = epic.get('progress', {})
     children = epic.get('children', [])
     expanded = epic.get('expanded', False)
     priority = epic.get('priority', 4)
+    
+    # Unique ID for this epic instance (epic can appear in multiple columns)
+    instance_id = f"{epic_id}-{column_status}" if column_status else epic_id
     
     # Priority styling
     p_class = f'p{priority}' if priority <= 4 else 'p4'
@@ -2421,8 +2500,8 @@ def render_epic_card(epic: Dict[str, Any], terminals: Dict[str, Any], sessions: 
         children_html = '<div class="empty">No tasks</div>'
     
     return f'''
-    <div class="epic-card {p_class}" data-epic-id="{epic_id}">
-        <div class="epic-header" onclick="toggleEpic('{epic_id}')">
+    <div class="epic-card {p_class}" data-epic-id="{instance_id}" data-epic-base="{epic_id}">
+        <div class="epic-header" onclick="toggleEpic('{instance_id}')">
             <span class="expand-icon">{expand_icon}</span>
             <div class="epic-info">
                 <span class="epic-title">{title}</span>
@@ -2435,29 +2514,38 @@ def render_epic_card(epic: Dict[str, Any], terminals: Dict[str, Any], sessions: 
                 {render_progress_bar(percent)}
             </div>
         </div>
-        <div class="epic-children {expanded_class}" id="epic-children-{epic_id}">
+        <div class="epic-children {expanded_class}" id="epic-children-{instance_id}">
             {children_html}
         </div>
     </div>
     '''
 
 
-def render_orphans_section(orphans: List[Dict[str, Any]], terminals: Dict[str, Any], sessions: Dict[str, Any]) -> str:
-    """Render the uncategorized/orphan tasks section."""
+def render_orphans_section(orphans: List[Dict[str, Any]], terminals: Dict[str, Any], 
+                           sessions: Dict[str, Any], column_status: str = '') -> str:
+    """Render the uncategorized/orphan tasks section.
+    
+    Args:
+        orphans: List of orphan issues
+        terminals: Terminal data for cards
+        sessions: Session data for cards
+        column_status: Column this section appears in (for unique IDs)
+    """
     if not orphans:
         return ''
     
     count = len(orphans)
     cards_html = ''.join(render_card(orphan, terminals, sessions) for orphan in orphans)
+    section_id = f"orphans-{column_status}" if column_status else "orphans"
     
     return f'''
-    <div class="orphans-section">
-        <div class="orphans-header" onclick="toggleOrphans()">
-            <span class="expand-icon" id="orphans-expand-icon">▶</span>
+    <div class="orphans-section" data-orphans-id="{section_id}">
+        <div class="orphans-header" onclick="toggleOrphans('{section_id}')">
+            <span class="expand-icon">▶</span>
             <span class="orphans-title">Uncategorized</span>
             <span class="orphans-count">{count} tasks</span>
         </div>
-        <div class="orphans-children collapsed" id="orphans-children">
+        <div class="orphans-children collapsed" id="orphans-children-{section_id}">
             {cards_html}
         </div>
     </div>
@@ -2481,13 +2569,13 @@ def render_column_epic_view(status: str, column_data: Dict[str, List],
     # Count total items (epics + orphans)
     count = len(epics) + len(orphans)
     
-    # Render epic cards
+    # Render epic cards (pass status for unique IDs when epic spans columns)
     epics_html = ''
     for epic in epics:
-        epics_html += render_epic_card(epic, terminals, sessions)
+        epics_html += render_epic_card(epic, terminals, sessions, column_status=status)
     
-    # Render orphans section
-    orphans_html = render_orphans_section(orphans, terminals, sessions) if orphans else ''
+    # Render orphans section (pass status for unique IDs)
+    orphans_html = render_orphans_section(orphans, terminals, sessions, column_status=status) if orphans else ''
     
     if not epics_html and not orphans_html:
         content_html = '<div class="empty">No issues</div>'
