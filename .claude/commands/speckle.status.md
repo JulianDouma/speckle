@@ -63,7 +63,7 @@ source ".speckle/scripts/epics.sh"
 # Find mapping file for current feature
 MAPPING_FILE=""
 if [ -n "$FEATURE_DIR" ]; then
-    MAPPING_FILE="$FEATURE_DIR/mapping.json"
+    MAPPING_FILE="$FEATURE_DIR/.speckle-mapping.json"
 fi
 
 # Get epic ID and show epic info
@@ -301,7 +301,7 @@ if [[ "$ARGUMENTS" == *"--epics"* ]]; then
                 # Find mapping file for this epic to calculate progress
                 EPIC_LABEL=$(echo "$line" | grep -oE 'epic:[a-z0-9-]+' | head -1 || echo "")
                 EPIC_FEATURE="${EPIC_LABEL#epic:}"
-                EPIC_MAPPING=$(find specs -maxdepth 2 -name "mapping.json" -path "*$EPIC_FEATURE*" 2>/dev/null | head -1 || echo "")
+                EPIC_MAPPING=$(find specs -maxdepth 2 -name ".speckle-mapping.json" -path "*$EPIC_FEATURE*" 2>/dev/null | head -1 || echo "")
                 
                 EPIC_PCT="0"
                 if [ -f "$EPIC_MAPPING" ]; then
