@@ -18,13 +18,24 @@ from pathlib import Path
 
 
 def get_speckle_root() -> Path:
-    """Find the .speckle directory, searching up from cwd."""
+    """Find the .speckle directory, searching up from cwd or using script location."""
+    # First, try searching up from current directory
     current = Path.cwd()
     while current != current.parent:
         if (current / '.speckle').is_dir():
             return current / '.speckle'
         current = current.parent
-    # Fallback to cwd/.speckle
+    
+    # Fallback: use the directory containing this script (cli.py is in .speckle/)
+    script_dir = Path(__file__).resolve().parent
+    if script_dir.name == '.speckle' or (script_dir / 'scripts').is_dir():
+        return script_dir
+    
+    # Last resort: maybe script is in .speckle/scripts/
+    if script_dir.parent.name == '.speckle':
+        return script_dir.parent
+    
+    # Give up - return cwd/.speckle and let the caller handle the error
     return Path.cwd() / '.speckle'
 
 
