@@ -55,7 +55,11 @@ def cmd_board(args):
     if args.no_browser:
         cmd.append('--no-browser')
     
-    return subprocess.call(cmd)
+    try:
+        return subprocess.call(cmd)
+    except KeyboardInterrupt:
+        # board.py already printed goodbye message
+        return 0
 
 
 def cmd_doctor(args):
@@ -309,4 +313,8 @@ For Claude commands, use:
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        # Graceful shutdown on Ctrl+C
+        sys.exit(0)

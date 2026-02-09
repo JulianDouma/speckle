@@ -13,3 +13,4 @@ Thumbs.db
 
 # Build artifacts
 *.log
+.speckle/__pycache__/
