@@ -2,6 +2,66 @@
 
 All notable changes to Speckle are documented here.
 
+## [1.4.0] - 2026-02-09
+
+### Ralph-Style Iterative Execution Loop
+
+Addresses [#18](https://github.com/JulianDouma/Speckle/issues/18) - Gastown/Ralph Integration: Ephemeral Workers for Iterative Development.
+
+Introduces the Ralph pattern for autonomous, iterative development with fresh context per task.
+
+### Added
+
+#### /speckle.loop Command
+- **Fresh context per task** - Each iteration spawns a new agent context (Ralph pattern)
+- **Progress persistence** - Learnings survive session restarts in `.speckle/progress.txt`
+- **DoD verifiers** - Definition of Done enforcement before closing tasks
+- **Max iterations safety** - Configurable limit (default: 10) prevents runaway loops
+- **Dry-run mode** - Preview execution plan without running
+- **Continue mode** - Resume from previous progress
+
+#### Command Options
+- `--max N` - Set maximum iterations (default: 10)
+- `--verify` - Run DoD verifiers before closing tasks
+- `--dry-run` - Show execution plan without running
+- `--continue` - Resume from previous progress
+
+#### Helper Library
+- `loop.sh` - Loop helper functions:
+  - `init_progress_file()` - Initialize progress tracking
+  - `record_iteration_start()` - Log iteration start
+  - `record_iteration_complete()` - Log completion with learnings
+  - `run_standard_verifiers()` - Standard build/test checks
+  - `format_task_prompt()` - Generate agent prompts with context
+
+### The Ralph Pattern
+
+Based on [Steve Yegge's Gastown](https://github.com/steveyegge/gastown) and 
+[Geoffrey Huntley's Ralph](https://github.com/snarktank/ralph):
+
+```
+Loop Execution:
+1. Pick highest-priority ready task
+2. Spawn fresh agent context (clean slate)
+3. Implement single task
+4. Run quality checks (build, test)
+5. Commit changes
+6. Record learnings to progress.txt
+7. Close task
+8. Repeat until complete
+```
+
+Memory persists via:
+- Git history (commits)
+- `.speckle/progress.txt` (learnings)
+- Bead status (which tasks done)
+
+### References
+- [Gastown](https://github.com/steveyegge/gastown) - Multi-agent workspace manager (8.8k ⭐)
+- [Ralph](https://github.com/snarktank/ralph) - Autonomous AI agent loop (9.8k ⭐)
+- [daVinci-Agency](https://arxiv.org/abs/2602.02619) - Long-horizon agent learning
+- [SWE-agent](https://arxiv.org/abs/2405.15793) - Agent-computer interfaces
+
 ## [1.3.0] - 2026-02-09
 
 ### System Color Mode & GitHub Integration

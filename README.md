@@ -110,6 +110,7 @@ Options:
 |---------|-------------|
 | `/speckle.sync` | Bidirectional sync between tasks.md and beads |
 | `/speckle.implement` | Implement next ready task with progress tracking |
+| `/speckle.loop` | Ralph-style iterative execution until all tasks complete |
 | `/speckle.status` | Show epic progress and health |
 | `/speckle.progress` | Add manual progress note to current task |
 | `/speckle.bugfix` | Start lightweight bugfix workflow |
@@ -373,6 +374,79 @@ speckle board --no-browser        # Don't auto-open browser
 - Label filtering via dropdown
 - Auto-refresh (default: 5 seconds)
 - Responsive layout for tablet/mobile
+
+## Ralph-Style Loop
+
+Run autonomous implementation loops following the [Ralph pattern](https://github.com/snarktank/ralph) 
+inspired by [Gastown](https://github.com/steveyegge/gastown):
+
+```bash
+# Run until all tasks complete (max 10 iterations)
+/speckle.loop
+
+# With options
+/speckle.loop --max 20           # More iterations
+/speckle.loop --verify           # Run DoD verifiers
+/speckle.loop --dry-run          # Preview plan
+/speckle.loop --continue         # Resume from progress
+```
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────┐
+│  SPECKLE LOOP (Ralph Pattern)                       │
+├─────────────────────────────────────────────────────┤
+│  1. Pick highest-priority ready task                │
+│  2. Spawn fresh agent context (clean slate)         │
+│  3. Implement single task                           │
+│  4. Run quality checks (build, test)                │
+│  5. Commit changes                                  │
+│  6. Record learnings to progress.txt                │
+│  7. Close task                                      │
+│  8. Repeat until complete                           │
+└─────────────────────────────────────────────────────┘
+```
+
+**Key principle:** Each iteration gets fresh context. Memory persists via:
+- **Git history** - Commits from previous iterations
+- **progress.txt** - Learnings and context
+- **Bead status** - Which tasks are done
+
+### Progress Persistence
+
+Learnings are recorded in `.speckle/progress.txt`:
+
+```markdown
+---
+## Iteration 1: Add user model
+**Bead:** speckle-abc
+**Completed:** 2026-02-09T19:30:00Z
+**Result:** success
+
+### Changes
+- Commit: abc1234 feat(user): add user model
+- Files changed: 3
+
+### Learnings
+- Used UUID for primary key (better for distributed systems)
+- Added unique constraint on email
+```
+
+### DoD Verifiers
+
+With `--verify`, the loop runs Definition of Done checks:
+
+- Build passes (if Makefile exists)
+- Tests pass (make test, npm test, composer test)
+- No uncommitted changes
+
+Only tasks passing all verifiers are closed.
+
+### References
+
+- [Gastown](https://github.com/steveyegge/gastown) - Multi-agent workspace manager (8.8k ⭐)
+- [Ralph](https://github.com/snarktank/ralph) - Autonomous AI agent loop (9.8k ⭐)
 
 ## Troubleshooting
 

@@ -242,13 +242,13 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
         
         header {{
-            background: var(--header-gradient);
-            color: white;
+            background: transparent;
+            color: var(--text);
             padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: var(--shadow-header);
+            border-bottom: 1px solid var(--border);
         }}
         
         header h1 {{
@@ -268,7 +268,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         
         /* === T004: Theme toggle button === */
         .theme-toggle {{
-            background: rgba(255,255,255,0.2);
+            background: var(--column-border);
             border: none;
             font-size: 1.1rem;
             cursor: pointer;
@@ -279,20 +279,21 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
         
         .theme-toggle:hover {{
-            background: rgba(255,255,255,0.3);
+            background: var(--border);
         }}
         
         .refresh-badge {{
-            background: rgba(255,255,255,0.2);
+            background: var(--column-border);
+            color: var(--text-muted);
             padding: 0.25rem 0.75rem;
             border-radius: 1rem;
             font-size: 0.75rem;
         }}
         
         .filter-select {{
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
             cursor: pointer;

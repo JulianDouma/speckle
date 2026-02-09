@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="1.3.0"
+VERSION="1.4.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Colors (with fallback for non-color terminals)
@@ -355,7 +355,7 @@ do_install() {
     log ""
     log "${BOLD}Installing commands...${NC}"
     local cmd_count=0
-    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md speckle.board.md speckle.issue.md speckle.triage.md; do
+    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md speckle.board.md speckle.issue.md speckle.triage.md speckle.loop.md; do
         if [[ -f "$SCRIPT_DIR/.claude/commands/$cmd" ]]; then
             cp "$SCRIPT_DIR/.claude/commands/$cmd" "$target/.claude/commands/"
             log "  ${GREEN}[OK]${NC} $cmd"
@@ -371,7 +371,7 @@ do_install() {
     # Copy scripts
     log ""
     log "${BOLD}Installing scripts...${NC}"
-    for script in common.sh comments.sh labels.sh epics.sh board.py; do
+    for script in common.sh comments.sh labels.sh epics.sh loop.sh board.py; do
         if [[ -f "$SCRIPT_DIR/.speckle/scripts/$script" ]]; then
             cp "$SCRIPT_DIR/.speckle/scripts/$script" "$target/.speckle/scripts/"
             chmod +x "$target/.speckle/scripts/$script"
@@ -461,6 +461,7 @@ do_install() {
     log "${BOLD}Available commands:${NC}"
     log "   /speckle.sync      - Sync tasks.md <-> beads"
     log "   /speckle.implement - Implement next ready task"
+    log "   /speckle.loop      - Ralph-style iterative execution"
     log "   /speckle.status    - Show epic progress"
     log "   /speckle.progress  - Add progress note"
     log "   /speckle.bugfix    - Start bugfix workflow"
@@ -510,7 +511,7 @@ do_uninstall() {
     log "${BOLD}Removing Speckle files...${NC}"
     
     # Remove commands
-    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md speckle.board.md speckle.issue.md speckle.triage.md; do
+    for cmd in speckle.sync.md speckle.implement.md speckle.status.md speckle.progress.md speckle.bugfix.md speckle.hotfix.md speckle.doctor.md speckle.board.md speckle.issue.md speckle.triage.md speckle.loop.md; do
         if [[ -f "$target/.claude/commands/$cmd" ]]; then
             rm "$target/.claude/commands/$cmd"
             log "  ${GREEN}[OK]${NC} Removed $cmd"
