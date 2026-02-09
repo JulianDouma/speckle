@@ -1,6 +1,9 @@
 ---
 description: Execute the implementation planning workflow using the plan template to generate design artifacts.
 handoffs: 
+  - label: Clarify Requirements
+    agent: speckit.clarify
+    prompt: Clarify requirements before continuing
   - label: Create Tasks
     agent: speckit.tasks
     prompt: Break the plan into tasks

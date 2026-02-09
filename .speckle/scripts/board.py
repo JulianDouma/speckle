@@ -153,78 +153,80 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
         
         /* === T001: Dark theme via data attribute === */
+        /* Midnight black theme - true dark mode */
         [data-theme="dark"] {{
-            --bg: #0f172a;
-            --card-bg: #1e293b;
-            --text: #e2e8f0;
-            --text-muted: #94a3b8;
-            --border: #334155;
-            --header-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --bg: #000000;
+            --card-bg: #0a0a0a;
+            --text: #f1f5f9;
+            --text-muted: #a1a1aa;
+            --border: #27272a;
+            --header-gradient: linear-gradient(135deg, #3730a3 0%, #581c87 100%);
             
-            /* Column backgrounds - darker variants */
-            --backlog: #1e293b;
-            --progress: #1e3a5f;
-            --blocked: #451a1a;
-            --done: #14532d;
+            /* Column backgrounds - near black with subtle color hints */
+            --backlog: #0a0a0a;
+            --progress: #0a1628;
+            --blocked: #1a0a0a;
+            --done: #0a1a0a;
             
-            /* Shadows - more pronounced in dark mode */
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
-            --shadow-header: 0 2px 4px rgba(0,0,0,0.3);
+            /* Shadows - subtle glow effect */
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.6);
+            --shadow-header: 0 2px 8px rgba(0,0,0,0.5);
             
-            /* Badge backgrounds (dark mode - more contrast) */
-            --badge-p0-bg: #450a0a;
-            --badge-p0-text: #fca5a5;
-            --badge-p2-bg: #451a03;
-            --badge-p2-text: #fcd34d;
+            /* Badge backgrounds (dark mode - vibrant on black) */
+            --badge-p0-bg: #2a0a0a;
+            --badge-p0-text: #f87171;
+            --badge-p2-bg: #2a1a03;
+            --badge-p2-text: #fbbf24;
             --badge-p3-bg: #052e16;
-            --badge-p3-text: #86efac;
-            --type-bg: #334155;
-            --type-bug-bg: #450a0a;
-            --type-bug-text: #fca5a5;
-            --type-feature-bg: #2e1065;
-            --type-feature-text: #c4b5fd;
-            --type-epic-bg: #431407;
-            --type-epic-text: #fdba74;
-            --label-bg: #312e81;
-            --label-text: #c7d2fe;
+            --badge-p3-text: #4ade80;
+            --type-bg: #18181b;
+            --type-bug-bg: #2a0a0a;
+            --type-bug-text: #f87171;
+            --type-feature-bg: #1e1033;
+            --type-feature-text: #a78bfa;
+            --type-epic-bg: #2a1407;
+            --type-epic-text: #fb923c;
+            --label-bg: #1e1b4b;
+            --label-text: #a5b4fc;
             
             /* Column header border */
             --column-border: rgba(255,255,255,0.1);
         }}
         
         /* === T002: System preference detection (when no explicit choice) === */
+        /* Midnight black theme - matches [data-theme="dark"] */
         @media (prefers-color-scheme: dark) {{
             :root:not([data-theme]) {{
-                --bg: #0f172a;
-                --card-bg: #1e293b;
-                --text: #e2e8f0;
-                --text-muted: #94a3b8;
-                --border: #334155;
-                --header-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-                --backlog: #1e293b;
-                --progress: #1e3a5f;
-                --blocked: #451a1a;
-                --done: #14532d;
-                --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-                --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
-                --shadow-header: 0 2px 4px rgba(0,0,0,0.3);
-                --badge-p0-bg: #450a0a;
-                --badge-p0-text: #fca5a5;
-                --badge-p2-bg: #451a03;
-                --badge-p2-text: #fcd34d;
+                --bg: #000000;
+                --card-bg: #0a0a0a;
+                --text: #f1f5f9;
+                --text-muted: #a1a1aa;
+                --border: #27272a;
+                --header-gradient: linear-gradient(135deg, #3730a3 0%, #581c87 100%);
+                --backlog: #0a0a0a;
+                --progress: #0a1628;
+                --blocked: #1a0a0a;
+                --done: #0a1a0a;
+                --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+                --shadow-md: 0 4px 6px rgba(0,0,0,0.6);
+                --shadow-header: 0 2px 8px rgba(0,0,0,0.5);
+                --badge-p0-bg: #2a0a0a;
+                --badge-p0-text: #f87171;
+                --badge-p2-bg: #2a1a03;
+                --badge-p2-text: #fbbf24;
                 --badge-p3-bg: #052e16;
-                --badge-p3-text: #86efac;
-                --type-bg: #334155;
-                --type-bug-bg: #450a0a;
-                --type-bug-text: #fca5a5;
-                --type-feature-bg: #2e1065;
-                --type-feature-text: #c4b5fd;
-                --type-epic-bg: #431407;
-                --type-epic-text: #fdba74;
-                --label-bg: #312e81;
-                --label-text: #c7d2fe;
-                --column-border: rgba(255,255,255,0.1);
+                --badge-p3-text: #4ade80;
+                --type-bg: #18181b;
+                --type-bug-bg: #2a0a0a;
+                --type-bug-text: #f87171;
+                --type-feature-bg: #1e1033;
+                --type-feature-text: #a78bfa;
+                --type-epic-bg: #2a1407;
+                --type-epic-text: #fb923c;
+                --label-bg: #1e1b4b;
+                --label-text: #a5b4fc;
+                --column-border: rgba(255,255,255,0.08);
             }}
         }}
         
