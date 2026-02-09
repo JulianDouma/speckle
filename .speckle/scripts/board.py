@@ -218,7 +218,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="refresh" content="{refresh}">
+    <!-- Auto-refresh disabled when terminal is open - handled by JavaScript -->
     <title>Speckle Board</title>
     <style>
         /* === T001: Light theme (default) === */
@@ -1032,6 +1032,58 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         // Update session durations every second
         setInterval(() => SessionController.updateDurations(), 1000);
         
+        // === Smart Auto-Refresh ===
+        // Only refresh when no terminal drawer is open and no modal is showing
+        const AutoRefresh = {{
+            interval: {refresh} * 1000,
+            timer: null,
+            
+            start() {{
+                this.stop();
+                this.timer = setTimeout(() => this.refresh(), this.interval);
+            }},
+            
+            stop() {{
+                if (this.timer) {{
+                    clearTimeout(this.timer);
+                    this.timer = null;
+                }}
+            }},
+            
+            refresh() {{
+                // Don't refresh if terminal drawer is open
+                const openDrawer = document.querySelector('.terminal-drawer.open');
+                if (openDrawer) {{
+                    console.log('Auto-refresh paused: terminal drawer open');
+                    this.start(); // Schedule next check
+                    return;
+                }}
+                
+                // Don't refresh if modal is open
+                const openModal = document.querySelector('.terminal-modal.open');
+                if (openModal) {{
+                    console.log('Auto-refresh paused: terminal modal open');
+                    this.start();
+                    return;
+                }}
+                
+                // Don't refresh if WebSocket is connected with active data
+                if (TerminalController.connected && Object.keys(TerminalController.terminals).length > 0) {{
+                    console.log('Auto-refresh paused: terminal connected');
+                    this.start();
+                    return;
+                }}
+                
+                // Safe to refresh
+                window.location.reload();
+            }}
+        }};
+        
+        // Start auto-refresh after page load
+        document.addEventListener('DOMContentLoaded', () => {{
+            AutoRefresh.start();
+        }});
+        
         // === Terminal Controller ===
         const TerminalController = {{
             WS_PORT: {ws_port},
@@ -1468,22 +1520,10 @@ def render_card(issue: Dict[str, Any], terminals: Optional[Dict[str, Any]] = Non
             </button>
         </div>'''
         else:
-            # No active session - show start button
-            session_html = f'''
-        <div class="session-actions">
-            <button id="spawn-btn-{issue_id}" class="session-btn primary" onclick="SessionController.spawn('{issue_id}')" title="Start Claude session">
-                ▶ Start Session
-            </button>
-        </div>'''
-    
-    # For open/backlog cards - optionally show start button
-    elif status == 'open' and priority <= 2:
-        # Show start button for high-priority backlog items
-        session_html = f'''
-        <div class="session-actions" style="margin-top: 0.5rem;">
-            <button id="spawn-btn-{issue_id}" class="session-btn" onclick="SessionController.spawn('{issue_id}')" title="Start Claude session (will set to in_progress)">
-                ▶ Start
-            </button>
+            # No active session - sessions auto-start via daemon when bead goes in_progress
+            session_html = '''
+        <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-muted);">
+            No active session
         </div>'''
     
     # Terminal drawer for in_progress cards with active terminal
