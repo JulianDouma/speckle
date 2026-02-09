@@ -17,6 +17,7 @@ Options:
 - `--all`: Show all open tasks across all features
 - `--verbose`: Include full comment history
 - `--by-story`: Group progress by story labels instead of phases
+- `--epics`: List all epics with their progress
 
 ## Environment Check
 
@@ -50,6 +51,56 @@ if [[ "$BRANCH" =~ ^[0-9]{3}- ]]; then
 else
     echo "ℹ️  Not on a feature branch"
     FEATURE_NAME="(no feature)"
+fi
+```
+
+## Epic Summary
+
+```bash
+# Source epic helpers
+source ".speckle/scripts/epics.sh"
+
+# Find mapping file for current feature
+MAPPING_FILE=""
+if [ -n "$FEATURE_DIR" ]; then
+    MAPPING_FILE="$FEATURE_DIR/mapping.json"
+fi
+
+# Get epic ID and show epic info
+EPIC_ID=""
+if [ -f "$MAPPING_FILE" ]; then
+    EPIC_ID=$(get_epic_id "$MAPPING_FILE")
+fi
+
+if [ -n "$EPIC_ID" ]; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════"
+    echo "🎯 Epic Summary"
+    echo "═══════════════════════════════════════════════════════════"
+    
+    # Get epic details
+    EPIC_INFO=$(bd show "$EPIC_ID" 2>/dev/null || echo "")
+    if [ -n "$EPIC_INFO" ]; then
+        EPIC_NAME=$(echo "$EPIC_INFO" | grep -E '^Title:' | sed 's/^Title:\s*//' || echo "$EPIC_ID")
+        EPIC_STATUS=$(echo "$EPIC_INFO" | grep -E '^Status:' | sed 's/^Status:\s*//' || echo "unknown")
+        
+        echo ""
+        echo "   ID:     $EPIC_ID"
+        echo "   Name:   $EPIC_NAME"
+        echo "   Status: $EPIC_STATUS"
+        
+        # Calculate and display epic progress
+        EPIC_PROGRESS=$(get_epic_progress "$EPIC_ID" "$MAPPING_FILE")
+        echo ""
+        echo "   Epic Progress: $EPIC_PROGRESS%"
+        
+        # Visual progress bar for epic
+        EPIC_FILLED=$((EPIC_PROGRESS / 5))
+        EPIC_EMPTY=$((20 - EPIC_FILLED))
+        EPIC_BAR=$(printf '█%.0s' $(seq 1 $EPIC_FILLED 2>/dev/null) || echo "")
+        EPIC_BAR+=$(printf '░%.0s' $(seq 1 $EPIC_EMPTY 2>/dev/null) || echo "")
+        echo "   [$EPIC_BAR]"
+    fi
 fi
 ```
 
@@ -216,6 +267,58 @@ if [ -z "$READY_LIST" ]; then
 else
     echo ""
     echo "$READY_LIST" | sed 's/^/   /'
+fi
+```
+
+## All Epics Overview
+
+```bash
+# Check if --epics flag is set
+if [[ "$ARGUMENTS" == *"--epics"* ]]; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════"
+    echo "🎯 All Epics"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+    
+    # List all issues with epic label
+    EPIC_LIST=$(bd list --label epic 2>/dev/null | grep "speckle-" || echo "")
+    
+    if [ -z "$EPIC_LIST" ]; then
+        echo "   No epics found"
+    else
+        printf "   %-12s %-30s %8s %8s\n" "ID" "Name" "Status" "Progress"
+        printf "   %-12s %-30s %8s %8s\n" "────────────" "──────────────────────────────" "────────" "────────"
+        
+        echo "$EPIC_LIST" | while read -r line; do
+            EPIC_ISSUE_ID=$(echo "$line" | grep -oE 'speckle-[a-z0-9]+' | head -1)
+            if [ -n "$EPIC_ISSUE_ID" ]; then
+                # Get epic details
+                EPIC_DETAILS=$(bd show "$EPIC_ISSUE_ID" 2>/dev/null || echo "")
+                EPIC_TITLE=$(echo "$EPIC_DETAILS" | grep -E '^Title:' | sed 's/^Title:\s*//' | cut -c1-30 || echo "Unknown")
+                EPIC_STATUS=$(echo "$EPIC_DETAILS" | grep -E '^Status:' | sed 's/^Status:\s*//' || echo "open")
+                
+                # Find mapping file for this epic to calculate progress
+                EPIC_LABEL=$(echo "$line" | grep -oE 'epic:[a-z0-9-]+' | head -1 || echo "")
+                EPIC_FEATURE="${EPIC_LABEL#epic:}"
+                EPIC_MAPPING=$(find specs -maxdepth 2 -name "mapping.json" -path "*$EPIC_FEATURE*" 2>/dev/null | head -1 || echo "")
+                
+                EPIC_PCT="0"
+                if [ -f "$EPIC_MAPPING" ]; then
+                    EPIC_PCT=$(get_epic_progress "$EPIC_ISSUE_ID" "$EPIC_MAPPING")
+                fi
+                
+                printf "   %-12s %-30s %8s %7d%%\n" "$EPIC_ISSUE_ID" "$EPIC_TITLE" "$EPIC_STATUS" "$EPIC_PCT"
+                
+                # Show mini progress bar
+                MINI_FILLED=$((EPIC_PCT / 10))
+                MINI_EMPTY=$((10 - MINI_FILLED))
+                MINI_BAR=$(printf '█%.0s' $(seq 1 $MINI_FILLED 2>/dev/null) || echo "")
+                MINI_BAR+=$(printf '░%.0s' $(seq 1 $MINI_EMPTY 2>/dev/null) || echo "")
+                printf "   %12s [$MINI_BAR]\n" ""
+            fi
+        done
+    fi
 fi
 ```
 

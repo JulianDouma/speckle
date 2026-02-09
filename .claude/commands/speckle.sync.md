@@ -267,3 +267,29 @@ console.log(`
 🎯 Next: Run \`bd ready\` to see available work
 `)
 ```
+
+## Update Epic Status
+
+After syncing tasks, update the epic's status based on task states:
+
+```bash
+# Get epic ID from mapping and update its status
+# This automatically transitions the epic between: open -> in_progress -> closed
+# based on the aggregate state of all linked tasks
+EPIC_ID=$(get_epic_id "$MAPPING_FILE")
+if [ -n "$EPIC_ID" ]; then
+    NEW_STATUS=$(update_epic_status "$EPIC_ID" "$MAPPING_FILE")
+    if [ -n "$NEW_STATUS" ]; then
+        echo "📊 Epic status: $NEW_STATUS"
+    fi
+fi
+
+# Edge case handling: If manual changes occur outside of sync (e.g., directly
+# closing beads via `bd close` or editing tasks.md checkboxes), the next sync
+# will reconcile the state. The epic status is always derived from the current
+# state of all tasks, ensuring eventual consistency regardless of how changes
+# were made. This means:
+#   - Manually closed beads -> next sync updates tasks.md checkboxes
+#   - Manually checked tasks.md -> next sync closes corresponding beads
+#   - Epic status is recalculated fresh on every sync
+```
