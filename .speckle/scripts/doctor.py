@@ -227,11 +227,19 @@ class Doctor:
             print(success(".beads/"))
             
             config = beads_dir / 'config.toml'
+            db = beads_dir / 'beads.db'
             if config.exists():
                 print("     └─ config.toml exists")
+            elif db.exists():
+                # Beads is functional without config.toml if database exists
+                print("     └─ beads.db exists (functional)")
             else:
-                print("     └─ ⚠️  config.toml MISSING (run: bd init)")
+                print("     └─ ⚠️  Not initialized (run: bd init)")
                 self.warnings += 1
+                if self.fix_mode:
+                    code, _, _ = run_command(['bd', 'init'])
+                    if code == 0:
+                        print("        → Initialized beads")
             
             formulas_dir = beads_dir / 'formulas'
             if formulas_dir.is_dir():
