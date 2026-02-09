@@ -28,8 +28,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional, List, Any, Callable
+from typing import Dict, Optional, List, Any, Callable, Set
 import threading
+import re
 
 # Try to import terminal_server for integration
 HAS_TERMINAL_SERVER = False
@@ -75,6 +76,116 @@ class SessionState(Enum):
     TERMINATED = "terminated"  # Manually stopped
 
 
+class AgentRole(Enum):
+    """Agent roles based on opencode-agent-conversations framework."""
+    CEO = "ceo"           # Tier 1: Strategy, priorities, success metrics
+    PM = "pm"             # Tier 1: Delivery planning, scope, risks
+    CTO = "cto"           # Tier 2: Technical strategy, architecture, NFRs
+    PO = "po"             # Tier 2: Product outcomes, requirements, ACs
+    DEV = "dev"           # Tier 3: Implementation, bug fixes, features
+    RESEARCH = "research" # Tier 2: Investigation, evidence, risks
+    MARKETING = "marketing"  # Tier 3: Messaging, positioning, docs
+
+
+class AgentTier(Enum):
+    """Agent hierarchy tiers."""
+    ORCHESTRATOR = 1  # CEO, PM - Strategy and coordination
+    SUPERVISOR = 2    # CTO, PO, RESEARCH - Domain expertise
+    WORKER = 3        # DEV, MARKETING - Implementation
+
+
+# Role-based session configuration
+# Derived from opencode-agent-conversations + Gastown session model
+ROLE_SESSION_CONFIG: Dict[str, Dict[str, Any]] = {
+    "ceo": {
+        "tier": AgentTier.ORCHESTRATOR,
+        "ephemeral": False,
+        "timeout": 7200,  # 2 hours
+        "max_concurrent": 1,
+        "tools": {"bd", "read"},
+        "worktree": False,
+        "description": "Strategic planning and prioritization",
+    },
+    "pm": {
+        "tier": AgentTier.ORCHESTRATOR,
+        "ephemeral": False,
+        "timeout": 7200,  # 2 hours
+        "max_concurrent": 1,
+        "tools": {"bd", "read"},
+        "worktree": False,
+        "description": "Delivery planning and work decomposition",
+    },
+    "cto": {
+        "tier": AgentTier.SUPERVISOR,
+        "ephemeral": True,
+        "timeout": 3600,  # 1 hour
+        "max_concurrent": 1,
+        "tools": {"read", "github", "sentry"},
+        "worktree": False,
+        "description": "Technical architecture and review",
+    },
+    "po": {
+        "tier": AgentTier.SUPERVISOR,
+        "ephemeral": True,
+        "timeout": 3600,  # 1 hour
+        "max_concurrent": 1,
+        "tools": {"read", "bd"},
+        "worktree": False,
+        "description": "Product requirements and acceptance criteria",
+    },
+    "dev": {
+        "tier": AgentTier.WORKER,
+        "ephemeral": True,
+        "timeout": 1800,  # 30 min
+        "max_concurrent": 3,
+        "tools": {"read", "write", "bash", "git", "github", "bd"},
+        "worktree": True,
+        "description": "Implementation and code changes",
+    },
+    "research": {
+        "tier": AgentTier.SUPERVISOR,
+        "ephemeral": True,
+        "timeout": 2400,  # 40 min
+        "max_concurrent": 1,
+        "tools": {"read", "webfetch", "bd"},
+        "worktree": False,
+        "description": "Investigation and evidence gathering",
+    },
+    "marketing": {
+        "tier": AgentTier.WORKER,
+        "ephemeral": True,
+        "timeout": 1800,  # 30 min
+        "max_concurrent": 1,
+        "tools": {"read", "write", "bd"},
+        "worktree": False,
+        "description": "Documentation and content creation",
+    },
+}
+
+
+# Intent-based role assignment for beads
+BEAD_INTENT_ROLE_MAPPING: Dict[str, str] = {
+    # Labels/keywords -> Primary role for worker session
+    "feature": "dev",
+    "bug": "dev",
+    "bugfix": "dev",
+    "refactor": "dev",
+    "test": "dev",
+    "testing": "dev",
+    "docs": "marketing",
+    "documentation": "marketing",
+    "copy": "marketing",
+    "research": "research",
+    "investigate": "research",
+    "analysis": "research",
+    "architecture": "cto",
+    "design": "cto",
+    "requirements": "po",
+    "story": "po",
+    "acceptance": "po",
+}
+
+
 @dataclass
 class SessionConfig:
     """Configuration for a session."""
@@ -83,6 +194,9 @@ class SessionConfig:
     auto_close_on_complete: bool = True
     use_prompt_caching: bool = True
     model: str = "claude-sonnet-4-20250514"
+    role: str = "dev"  # Default role
+    tools: Set[str] = field(default_factory=lambda: {"read", "write", "bash", "git", "bd"})
+    worktree: bool = True  # Use isolated git worktree
 
 
 def _utc_now() -> datetime:
@@ -106,6 +220,11 @@ class BeadSession:
     output_lines: int = 0
     error: Optional[str] = None
     config: SessionConfig = field(default_factory=SessionConfig)
+    # Role-based fields (Issue #44: Agent Role Integration)
+    role: str = "dev"  # Agent role (ceo, pm, cto, po, dev, research, marketing)
+    tier: int = 3      # Agent tier (1=orchestrator, 2=supervisor, 3=worker)
+    tools: Set[str] = field(default_factory=lambda: {"read", "write", "bash", "git", "bd"})
+    persona_prompt: str = ""  # Loaded from .speckle/agents/{role}.md
     
     def to_dict(self) -> dict:
         return {
@@ -122,6 +241,10 @@ class BeadSession:
             "output_lines": self.output_lines,
             "error": self.error,
             "duration_seconds": self.duration_seconds,
+            # Role-based fields
+            "role": self.role,
+            "tier": self.tier,
+            "tools": list(self.tools),
         }
     
     @property

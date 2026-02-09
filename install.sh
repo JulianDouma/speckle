@@ -250,21 +250,21 @@ verify_installation() {
         log "  ${GREEN}[OK]${NC} .speckle/ directory exists"
     else
         log "  ${RED}[FAIL]${NC} .speckle/ directory missing"
-        ((issues++))
+        ((issues++)) || true
     fi
     
     if [[ -d "$target/.speckle/scripts" ]]; then
         log "  ${GREEN}[OK]${NC} .speckle/scripts/ directory exists"
     else
         log "  ${RED}[FAIL]${NC} .speckle/scripts/ missing"
-        ((issues++))
+        ((issues++)) || true
     fi
     
     if [[ -d "$target/.claude/commands" ]]; then
         log "  ${GREEN}[OK]${NC} .claude/commands/ directory exists"
     else
         log "  ${RED}[FAIL]${NC} .claude/commands/ missing"
-        ((issues++))
+        ((issues++)) || true
     fi
     
     # Check key files
@@ -361,7 +361,7 @@ do_install() {
         if [[ -f "$SCRIPT_DIR/.claude/commands/$cmd" ]]; then
             cp "$SCRIPT_DIR/.claude/commands/$cmd" "$target/.claude/commands/"
             log "  ${GREEN}[OK]${NC} $cmd"
-            ((cmd_count++))
+            ((cmd_count++)) || true
         fi
     done
     
@@ -412,7 +412,7 @@ do_install() {
                 if [[ ! -f "$target/.speckle/templates/$template_name" ]]; then
                     cp "$template" "$target/.speckle/templates/"
                     log "  ${GREEN}[OK]${NC} $template_name"
-                    ((template_count++))
+                    ((template_count++)) || true
                 else
                     log "  ${BLUE}[SKIP]${NC} $template_name (already exists)"
                 fi
@@ -452,7 +452,7 @@ do_install() {
                 if [[ ! -f "$target/.github/ISSUE_TEMPLATE/$template_name" ]]; then
                     cp "$template" "$target/.github/ISSUE_TEMPLATE/"
                     log "  ${GREEN}[OK]${NC} $template_name"
-                    ((template_count++))
+                    ((template_count++)) || true
                 else
                     log "  ${BLUE}[SKIP]${NC} $template_name (already exists)"
                 fi
@@ -476,7 +476,7 @@ do_install() {
                 formula_name="$(basename "$formula")"
                 cp "$formula" "$target/.beads/formulas/"
                 log "  ${GREEN}[OK]${NC} $formula_name"
-                ((formula_count++))
+                ((formula_count++)) || true
             fi
         done
     fi

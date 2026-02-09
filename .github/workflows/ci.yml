@@ -61,12 +61,12 @@ jobs:
         run: |
           cd /tmp/speckle-test
           
-          echo "=== Checking scripts ==="
+          echo "=== Checking scripts in .speckle/scripts/ ==="
           SCRIPTS=(
             common.sh comments.sh labels.sh epics.sh loop.sh
             verifiers.sh convoy.sh workers.sh board.py doctor.py
             github.py terminal_server.py terminal_launcher.sh
-            session_manager.py session_daemon.py cli.py
+            session_manager.py session_daemon.py
           )
           
           for script in "${SCRIPTS[@]}"; do
@@ -78,13 +78,16 @@ jobs:
             fi
           done
           
+          echo ""
+          echo "=== Checking files in .speckle/ root ==="
+          
           # Check cli.py in .speckle root
           test -f .speckle/cli.py || (echo "FAIL: cli.py missing from .speckle/" && exit 1)
-          echo "OK: cli.py in .speckle/"
+          echo "OK: cli.py"
           
           # Check VERSION
           test -f .speckle/VERSION || (echo "FAIL: VERSION missing" && exit 1)
-          echo "OK: VERSION file present"
+          echo "OK: VERSION"
 
       - name: Verify all commands installed
         run: |
