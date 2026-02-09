@@ -22,6 +22,9 @@ Verify environment before proceeding:
 # Source label helpers
 source ".speckle/scripts/labels.sh"
 
+# Source epic helpers
+source ".speckle/scripts/epics.sh"
+
 # Check beads is available
 if ! command -v bd &> /dev/null; then
     echo "❌ Beads not installed. Install from: https://github.com/steveyegge/beads"
@@ -60,6 +63,27 @@ MAPPING_FILE="$FEATURE_DIR/.speckle-mapping.json"
 # Initialize mapping if not exists
 if [ ! -f "$MAPPING_FILE" ]; then
     echo '{"version":1,"feature":"'$BRANCH'","created":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","tasks":{}}' > "$MAPPING_FILE"
+fi
+```
+
+## Create/Load Epic
+
+Create an epic for this feature if one doesn't exist:
+
+```bash
+# Check if epic already exists for this feature
+EPIC_ID=$(get_epic_id "$MAPPING_FILE")
+
+if [ -z "$EPIC_ID" ]; then
+    # Create new epic from spec
+    EPIC_ID=$(create_epic "$BRANCH" "$SPEC_FILE")
+    
+    # Save epic ID to mapping
+    save_epic_id "$MAPPING_FILE" "$EPIC_ID"
+    
+    echo "🎯 Created epic: $EPIC_ID"
+else
+    echo "🎯 Using existing epic: $EPIC_ID"
 fi
 ```
 
@@ -135,6 +159,10 @@ for (const task of tasks) {
             created: new Date().toISOString()
         }
         console.log(`+ Created ${beadId} for ${task.id}`)
+        
+        // Link task to epic
+        exec(`link_task_to_epic "${beadId}" "${EPIC_ID}"`)
+        console.log(`  ↳ Linked to epic ${EPIC_ID}`)
     }
 }
 
@@ -238,4 +266,30 @@ console.log(`
 
 🎯 Next: Run \`bd ready\` to see available work
 `)
+```
+
+## Update Epic Status
+
+After syncing tasks, update the epic's status based on task states:
+
+```bash
+# Get epic ID from mapping and update its status
+# This automatically transitions the epic between: open -> in_progress -> closed
+# based on the aggregate state of all linked tasks
+EPIC_ID=$(get_epic_id "$MAPPING_FILE")
+if [ -n "$EPIC_ID" ]; then
+    NEW_STATUS=$(update_epic_status "$EPIC_ID" "$MAPPING_FILE")
+    if [ -n "$NEW_STATUS" ]; then
+        echo "📊 Epic status: $NEW_STATUS"
+    fi
+fi
+
+# Edge case handling: If manual changes occur outside of sync (e.g., directly
+# closing beads via `bd close` or editing tasks.md checkboxes), the next sync
+# will reconcile the state. The epic status is always derived from the current
+# state of all tasks, ensuring eventual consistency regardless of how changes
+# were made. This means:
+#   - Manually closed beads -> next sync updates tasks.md checkboxes
+#   - Manually checked tasks.md -> next sync closes corresponding beads
+#   - Epic status is recalculated fresh on every sync
 ```
