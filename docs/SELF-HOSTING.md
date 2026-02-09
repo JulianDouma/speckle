@@ -86,7 +86,7 @@ Maintain `DOGFOOD.md` capturing insights:
 
 ```bash
 # Clone Speckle
-git clone https://github.com/YOUR-USERNAME/Speckle.git
+git clone https://github.com/JulianDouma/Speckle.git
 cd Speckle
 
 # Start new feature

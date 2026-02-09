@@ -28,7 +28,7 @@ and memory across AI agent sessions.
 curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
 
 # Install spec-kit  
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+pipx install "specify-cli @ git+https://github.com/github/spec-kit.git"
 
 # Initialize in your project
 specify init . --ai claude
@@ -39,7 +39,7 @@ bd init
 
 ```bash
 # Clone and install
-git clone https://github.com/YOUR-USERNAME/Speckle.git /tmp/speckle
+git clone https://github.com/JulianDouma/Speckle.git /tmp/speckle
 /tmp/speckle/install.sh /path/to/your/project
 
 # Restart your AI agent to load commands
